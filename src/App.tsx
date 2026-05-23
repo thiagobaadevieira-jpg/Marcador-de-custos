@@ -2961,11 +2961,18 @@ export default function App() {
   }
 
   useEffect(() => {
+    // Timeout de segurança: se o Supabase não responder em 5s, vai para login
+    const timeout = setTimeout(() => setAuthLoading(false), 5000);
+
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      clearTimeout(timeout);
       if (session?.user) {
         const profile = await loadUserProfile(session.user.id);
         setCurrentUser(profile);
       }
+      setAuthLoading(false);
+    }).catch(() => {
+      clearTimeout(timeout);
       setAuthLoading(false);
     });
 
@@ -2978,7 +2985,7 @@ export default function App() {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => { clearTimeout(timeout); subscription.unsubscribe(); };
   }, []);
 
   if (authLoading) {
