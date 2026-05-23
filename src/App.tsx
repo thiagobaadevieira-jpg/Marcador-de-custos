@@ -3013,21 +3013,31 @@ export default function App() {
       setAuthLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      // CRÍTICO: nunca fazer queries Supabase DIRETO no callback — causa deadlock.
+      // O signInWithPassword retém o lock interno de auth e espera este callback
+      // terminar antes de prosseguir. Se fizermos uma query aqui, ela trava esperando
+      // o mesmo lock. Solução: deferir para fora do callback com setTimeout(fn, 0).
       if (session?.user) {
-        try {
-          const profile = await loadUserProfile(session.user.id);
-          setCurrentUser(profile);
-        } catch {
-          // Se o carregamento do perfil falhar, usa dados básicos da sessão
-          setCurrentUser({
-            id: session.user.id,
-            name: session.user.email?.split('@')[0] ?? 'Usuário',
-            email: session.user.email ?? '',
-            color: '#3b82f6',
-            initials: (session.user.email ?? 'US').slice(0, 2).toUpperCase(),
-          });
-        }
+        // Set imediato de fallback para tirar a tela de login
+        const fallbackUser: User = {
+          id: session.user.id,
+          name: session.user.email?.split('@')[0] ?? 'Usuário',
+          email: session.user.email ?? '',
+          color: '#3b82f6',
+          initials: (session.user.email ?? 'US').slice(0, 2).toUpperCase(),
+        };
+        setCurrentUser(fallbackUser);
+
+        // Depois, fora do lock, busca o perfil completo
+        setTimeout(async () => {
+          try {
+            const profile = await loadUserProfile(session.user.id);
+            setCurrentUser(profile);
+          } catch (err) {
+            console.error('Falha ao carregar perfil:', err);
+          }
+        }, 0);
       } else {
         setCurrentUser(null);
       }
