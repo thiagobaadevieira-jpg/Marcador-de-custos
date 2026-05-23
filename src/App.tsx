@@ -2443,13 +2443,31 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
     return result;
   }, [expenses, searchQuery, selectedCategoryFilter, selectedMonthFilter, sortOrder]);
 
+  // O(1) lookup maps — evita scan linear em cada render para cada linha da lista
+  const usersById = useMemo(() => {
+    const m = new Map<string, User>();
+    for (const u of users) m.set(u.id, u);
+    return m;
+  }, [users]);
+
+  const categoryColorByName = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const c of categories) m.set(c.name, c.color);
+    return m;
+  }, [categories]);
+
+  // Stats em uma única passada por expenses, em vez de filter+reduce por categoria
   const stats = useMemo(() => {
-    return categories.map(cat => {
-      const total = expenses
-        .filter(e => e.category === cat.name)
-        .reduce((sum, e) => sum + e.value, 0);
-      return { name: cat.name, total, color: cat.color, initials: cat.initials };
-    });
+    const totals = new Map<string, number>();
+    for (const e of expenses) {
+      totals.set(e.category, (totals.get(e.category) ?? 0) + e.value);
+    }
+    return categories.map(cat => ({
+      name: cat.name,
+      total: totals.get(cat.name) ?? 0,
+      color: cat.color,
+      initials: cat.initials,
+    }));
   }, [expenses, categories]);
 
   const totalAmount = useMemo(() => stats.reduce((sum, s) => sum + s.total, 0), [stats]);
@@ -3118,10 +3136,15 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                         className="interactive-glass rounded-[24px] sm:rounded-[32px] p-4 sm:p-6 flex items-center justify-between cursor-pointer group gap-4"
                       >
                         <div className="flex items-center gap-4 sm:gap-6 flex-1 min-w-0">
-                          <div 
-                            className="w-2.5 h-2.5 rounded-full shadow-[0_0_12px_currentcolor] shrink-0" 
-                            style={{ backgroundColor: categories.find(c => c.name === expense.category)?.color, color: categories.find(c => c.name === expense.category)?.color }}
-                          />
+                          {(() => {
+                            const color = categoryColorByName.get(expense.category);
+                            return (
+                              <div
+                                className="w-2.5 h-2.5 rounded-full shadow-[0_0_12px_currentcolor] shrink-0"
+                                style={{ backgroundColor: color, color }}
+                              />
+                            );
+                          })()}
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-4 mb-1">
                               <h4 className="font-bold text-sm leading-tight truncate group-hover:text-blue-400 transition-colors">{expense.name}</h4>
@@ -3139,7 +3162,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                               <span className="w-0.5 h-0.5 rounded-full bg-white/5" />
                               <p className="text-[9px] sm:text-[10px] text-white/20 font-black uppercase tracking-widest">{expense.category}</p>
                               {(() => {
-                                const owner = users.find(u => u.id === expense.userId);
+                                const owner = usersById.get(expense.userId);
                                 if (!owner) return null;
                                 return (
                                   <>
