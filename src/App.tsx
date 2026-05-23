@@ -2023,37 +2023,6 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
 
   useEffect(() => { loadData(); }, [user.id]);
 
-  if (dataLoading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
-        <p className="text-white/30 text-xs font-bold uppercase tracking-widest">Carregando dados...</p>
-      </div>
-    );
-  }
-
-  if (dataError) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-6">
-        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center text-red-400">
-          <AlertCircle className="w-8 h-8" />
-        </div>
-        <div className="text-center space-y-2">
-          <p className="font-bold text-white">{dataError}</p>
-          <p className="text-white/40 text-sm">Tente novamente ou verifique as configurações do Supabase.</p>
-        </div>
-        <button
-          onClick={loadData}
-          className="h-12 px-8 btn-gradient rounded-2xl font-bold text-sm text-white active:scale-95 transition-all"
-        >
-          Tentar Novamente
-        </button>
-        <button onClick={onLogout} className="text-xs text-white/30 hover:text-white/60 transition-colors font-bold">
-          Sair da Conta
-        </button>
-      </div>
-    );
-  }
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
@@ -2296,6 +2265,39 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
   const { scrollY } = useScroll();
   const headerY = useTransform(scrollY, [0, 80], [0, -120]);
   const tabsTop = useTransform(scrollY, [0, 80], [88, 20]);
+
+  // ─── Early returns AFTER all hooks ───────────────────────────────────────────
+  if (dataLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+        <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+        <p className="text-white/30 text-xs font-bold uppercase tracking-widest">Carregando dados...</p>
+      </div>
+    );
+  }
+
+  if (dataError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-6">
+        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center text-red-400">
+          <AlertCircle className="w-8 h-8" />
+        </div>
+        <div className="text-center space-y-2">
+          <p className="font-bold text-white">{dataError}</p>
+          <p className="text-white/40 text-sm">Tente novamente ou verifique as configurações do Supabase.</p>
+        </div>
+        <button
+          onClick={loadData}
+          className="h-12 px-8 btn-gradient rounded-2xl font-bold text-sm text-white active:scale-95 transition-all"
+        >
+          Tentar Novamente
+        </button>
+        <button onClick={onLogout} className="text-xs text-white/30 hover:text-white/60 transition-colors font-bold">
+          Sair da Conta
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="pb-32 pt-0 min-h-screen">
