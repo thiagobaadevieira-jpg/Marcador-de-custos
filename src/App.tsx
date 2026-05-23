@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef } from "react";
 import { motion, AnimatePresence, useScroll, useTransform } from "motion/react";
-import { DollarSign, Plus, LayoutDashboard, List, PieChart, LogOut, Search, Filter, Camera, X, ChevronRight, ChevronDown, Settings, Trash2, Menu, Edit2, AlertCircle, Download, Paperclip } from "lucide-react";
+import { DollarSign, Bell, Plus, LayoutDashboard, List, PieChart, LogOut, Search, Filter, Camera, X, ChevronRight, ChevronDown, Settings, Trash2, Menu, Edit2, AlertCircle, Download, Paperclip } from "lucide-react";
 import { cn, formatCurrency } from "@/src/lib/utils";
 import { MOCK_USERS, MOCK_EXPENSES } from "@/src/mockData";
 import { User, Expense } from "@/src/types";
@@ -178,6 +178,266 @@ const CategorySettingsModal = ({
             title="Excluir Categoria?"
             message={`Tem certeza que deseja remover a categoria "${catToDelete}"? Todos os gastos vinculados a ela permanecerão, mas a categoria será removida do painel.`}
           />
+        </>
+      )}
+    </AnimatePresence>
+  );
+};
+
+// --- Notification Settings Modal ---
+
+interface NotificationSettingsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  enabled: boolean;
+  onToggle: (enabled: boolean) => void;
+  time: string;
+  onTimeChange: (time: string) => void;
+}
+
+const NotificationSettingsModal = ({
+  isOpen,
+  onClose,
+  enabled,
+  onToggle,
+  time,
+  onTimeChange
+}: NotificationSettingsModalProps) => {
+  const [permissionState, setPermissionState] = useState<NotificationPermission>("default");
+  
+  const isSupported = typeof window !== 'undefined' && 'Notification' in window;
+
+  React.useEffect(() => {
+    if (isSupported) {
+      setPermissionState(Notification.permission);
+    }
+  }, [isOpen, isSupported]);
+
+  if (!isOpen) return null;
+
+  const handleRequestPermission = async () => {
+    if (!isSupported) return;
+    try {
+      const permission = await Notification.requestPermission();
+      setPermissionState(permission);
+      if (permission === 'granted') {
+        onToggle(true);
+        new Notification("Controle de Gastos", {
+          body: "Lembretes diários ativados com sucesso! 🔔",
+          icon: "/icon.svg"
+        });
+      }
+    } catch (err) {
+      console.error("Error requesting notification permission:", err);
+    }
+  };
+
+  const handleToggleChange = (newVal: boolean) => {
+    if (newVal) {
+      if (isSupported && Notification.permission !== 'granted') {
+        handleRequestPermission();
+      } else {
+        onToggle(true);
+      }
+    } else {
+      onToggle(false);
+    }
+  };
+
+  const handleSendTestNotification = () => {
+    if (!isSupported) {
+      alert("As notificações nativas não são suportadas neste navegador.");
+      return;
+    }
+    if (Notification.permission !== 'granted') {
+      Notification.requestPermission().then(perm => {
+        setPermissionState(perm);
+        if (perm === 'granted') {
+          new Notification("Controle de Gastos", {
+            body: "Seu lembrete de teste está funcionando! Muito bem! 🤝",
+            icon: "/icon.svg"
+          });
+        }
+      });
+    } else {
+      new Notification("Controle de Gastos", {
+        body: "Seu lembrete de teste está funcionando! Muito bem! 🤝",
+        icon: "/icon.svg"
+      });
+    }
+  };
+
+  const currentHour = time.split(':')[0] || '20';
+  const currentMinute = time.split(':')[1] || '00';
+
+  const handleHourSelect = (h: string) => {
+    onTimeChange(`${h}:${currentMinute}`);
+  };
+
+  const handleMinuteSelect = (m: string) => {
+    onTimeChange(`${currentHour}:${m}`);
+  };
+
+  const hoursArray = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+  const minutesArray = ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"];
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-slate-950/50 backdrop-blur-md z-[200]"
+          />
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0, y: 15 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.95, opacity: 0, y: 15 }}
+            className="fixed inset-4 m-auto max-w-sm h-fit max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none bg-[#161929]/90 backdrop-blur-2xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)]"
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-black tracking-tight text-white">Lembretes</h2>
+              <button 
+                onClick={onClose} 
+                className="p-3 glass rounded-2xl hover:bg-white/5 transition-colors"
+              >
+                <X className="w-5 h-5 text-white/40" />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div className="glass p-4 rounded-2xl flex items-start gap-3">
+                <Bell className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-white">Lembrete Inteligente</p>
+                  <p className="text-[11px] text-white/40 leading-relaxed text-left">
+                    Ajuda você a lembrar de anotar seus gastos. Se você já tiver cadastrado qualquer despesa hoje, nós não te incomodamos!
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-4 glass rounded-2xl">
+                <div className="text-left">
+                  <p className="text-sm font-bold text-white">Ativar Avisos</p>
+                  <p className="text-[10px] text-white/40">Notificações diárias</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleToggleChange(!enabled)}
+                  className={cn(
+                    "w-12 h-7 rounded-full p-1 transition-colors relative flex items-center shadow-inner",
+                    enabled ? "bg-blue-500" : "bg-white/10"
+                  )}
+                >
+                  <motion.div 
+                    layout
+                    className="w-5 h-5 rounded-full bg-white shadow"
+                    animate={{ x: enabled ? 20 : 0 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  />
+                </button>
+              </div>
+
+              {enabled && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-4"
+                >
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1 text-left">Horário de Aviso</p>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 bg-white/5 border border-white/5 rounded-2xl p-3 flex flex-col items-center">
+                        <label className="text-[9px] font-bold text-white/30 uppercase tracking-widest mb-1.5">Hora</label>
+                        <select 
+                          value={currentHour}
+                          onChange={(e) => handleHourSelect(e.target.value)}
+                          className="bg-transparent text-lg font-black text-white w-full text-center outline-none cursor-pointer"
+                        >
+                          {hoursArray.map(h => (
+                            <option key={h} value={h} className="bg-[#12141c] text-white">{h}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <span className="text-2xl font-black text-white/20 select-none">:</span>
+
+                      <div className="flex-1 bg-white/5 border border-white/5 rounded-2xl p-3 flex flex-col items-center">
+                        <label className="text-[9px] font-bold text-white/30 uppercase tracking-widest mb-1.5">Minuto</label>
+                        <select 
+                          value={currentMinute}
+                          onChange={(e) => handleMinuteSelect(e.target.value)}
+                          className="bg-transparent text-lg font-black text-white w-full text-center outline-none cursor-pointer"
+                        >
+                          {minutesArray.map(m => (
+                            <option key={m} value={m} className="bg-[#12141c] text-white">{m}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {isSupported && (
+                    <div className="p-4 bg-white/5 border border-white/5 rounded-2xl space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-white/30">Navegador</p>
+                        <span className={cn(
+                          "text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider",
+                          permissionState === "granted" && "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+                          permissionState === "denied" && "bg-red-500/10 text-red-400 border border-red-500/20",
+                          permissionState === "default" && "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                        )}>
+                          {permissionState === "granted" ? "Permitido" : permissionState === "denied" ? "Bloqueado" : "Pendente"}
+                        </span>
+                      </div>
+
+                      {permissionState === "default" && (
+                        <button
+                          type="button"
+                          onClick={handleRequestPermission}
+                          className="w-full h-11 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 rounded-xl text-xs font-bold transition-all active:scale-95"
+                        >
+                          Autorizar no Dispositivo
+                        </button>
+                      )}
+
+                      {permissionState === "denied" && (
+                        <p className="text-[10px] text-red-400/70 text-center leading-normal pt-1">
+                          As notificações foram bloqueadas. Por favor, ative nas configurações de privacidade do seu navegador se quiser receber lembretes.
+                        </p>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={handleSendTestNotification}
+                        className="w-full h-11 glass hover:bg-white/5 text-white/70 rounded-xl text-xs font-bold transition-all active:scale-95"
+                      >
+                        Enviar teste de notificação
+                      </button>
+                    </div>
+                  )}
+
+                  {!isSupported && (
+                    <div className="p-4 bg-red-500/5 border border-red-500/10 text-red-400 rounded-2xl text-[11px] text-center leading-normal">
+                      Notificações Push não são suportadas pelo seu navegador atual ou aba de visualização privada.
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-white/5">
+              <button 
+                onClick={onClose}
+                className="w-full h-14 btn-gradient rounded-2xl font-bold text-sm shadow-xl active:scale-95 transition-all text-white"
+              >
+                Concluir Configuração
+              </button>
+            </div>
+          </motion.div>
         </>
       )}
     </AnimatePresence>
@@ -1567,6 +1827,77 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  
+  const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
+    return localStorage.getItem('notifications_enabled') === 'true';
+  });
+  const [notificationTime, setNotificationTime] = useState(() => {
+    return localStorage.getItem('notification_time') || '20:00';
+  });
+
+  const handleNotificationsToggle = (enabledVal: boolean) => {
+    setNotificationsEnabled(enabledVal);
+    localStorage.setItem('notifications_enabled', enabledVal ? 'true' : 'false');
+  };
+
+  const handleNotificationsTimeChange = (timeVal: string) => {
+    setNotificationTime(timeVal);
+    localStorage.setItem('notification_time', timeVal);
+  };
+
+  // Background scheduler for reminders
+  React.useEffect(() => {
+    if (!notificationsEnabled) return;
+
+    const interval = setInterval(() => {
+      const now = new Date();
+      const currentHourMin = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      
+      if (currentHourMin === notificationTime) {
+        const lastNotified = localStorage.getItem('last_notified_minute');
+        const todayStr = now.toDateString();
+        const lastNotifiedKey = `${todayStr}_${notificationTime}`;
+        
+        if (lastNotified !== lastNotifiedKey) {
+          const hasExpensesToday = expenses.some(e => {
+            const expDate = new Date(e.createdAt);
+            return expDate.toDateString() === todayStr;
+          });
+
+          if (!hasExpensesToday) {
+            if ('Notification' in window && Notification.permission === 'granted') {
+              try {
+                navigator.serviceWorker.ready.then((registration) => {
+                  registration.showNotification("Controle de Gastos", {
+                    body: "Você lembrou de anotar os seus gastos hoje? Mantenha sua saúde financeira em dia! 📊",
+                    icon: "/icon.svg",
+                    badge: "/icon.svg",
+                    vibrate: [200, 100, 200],
+                    tag: "remind-gastos"
+                  } as any);
+                }).catch(() => {
+                  new Notification("Controle de Gastos", {
+                    body: "Você lembrou de anotar os seus gastos hoje? Mantenha sua saúde financeira em dia! 📊",
+                    icon: "/icon.svg"
+                  });
+                });
+              } catch (err) {
+                new Notification("Controle de Gastos", {
+                  body: "Você lembrou de anotar os seus gastos hoje? Mantenha sua saúde financeira em dia! 📊",
+                  icon: "/icon.svg"
+                });
+              }
+            }
+          }
+          localStorage.setItem('last_notified_minute', lastNotifiedKey);
+        }
+      }
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [notificationsEnabled, notificationTime, expenses]);
+
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [expenseToEdit, setExpenseToEdit] = useState<Expense | null>(null);
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
@@ -1636,6 +1967,22 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
   };
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    }
+    if (isMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isMenuOpen]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState<'none' | 'asc' | 'desc'>('none');
@@ -1718,8 +2065,9 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
           </div>
         </div>
         
-        <div className="flex items-center gap-3 relative">
+        <div className="flex items-center gap-3 relative" ref={menuRef}>
           <button 
+            type="button"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="p-2.5 glass rounded-xl hover:bg-white/5 transition-colors group"
           >
@@ -1728,20 +2076,12 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
 
           <AnimatePresence>
             {isMenuOpen && (
-              <>
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  onClick={() => setIsMenuOpen(false)}
-                  className="fixed inset-0 z-[-1]"
-                />
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                  className="absolute top-full right-0 mt-3 w-56 bg-[#12141c] border border-white/10 rounded-2xl shadow-2xl p-2 z-[90] backdrop-blur-3xl overflow-hidden"
-                >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                className="absolute top-full right-0 mt-3 w-56 bg-[#161929]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl p-2 z-[90] overflow-hidden"
+              >
                   <button 
                     onClick={() => {
                       setIsSettingsOpen(true);
@@ -1765,6 +2105,17 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
                   </button>
 
                   <button 
+                    onClick={() => {
+                      setIsNotificationsOpen(true);
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 hover:text-blue-400 transition-all text-sm font-bold text-white/60 text-left group/notifications"
+                  >
+                    <Bell className="w-4 h-4 group-hover/notifications:animate-bounce transition-transform" />
+                    <span>Notificações</span>
+                  </button>
+
+                  <button 
                     onClick={onLogout}
                     className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-500/10 hover:text-red-400 transition-all text-sm font-bold text-white/60 text-left group/logout"
                   >
@@ -1772,7 +2123,6 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
                     <span>Sair da Conta</span>
                   </button>
                 </motion.div>
-              </>
             )}
           </AnimatePresence>
         </div>
@@ -2216,6 +2566,14 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
         onClose={() => setIsExportOpen(false)}
         expenses={expenses}
         categories={categories}
+      />
+      <NotificationSettingsModal 
+        isOpen={isNotificationsOpen}
+        onClose={() => setIsNotificationsOpen(false)}
+        enabled={notificationsEnabled}
+        onToggle={handleNotificationsToggle}
+        time={notificationTime}
+        onTimeChange={handleNotificationsTimeChange}
       />
       <ConfirmationModal 
         isOpen={!!expenseToDelete}
