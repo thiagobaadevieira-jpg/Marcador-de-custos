@@ -1,12 +1,14 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { motion, AnimatePresence, useScroll, useTransform } from "motion/react";
-import { DollarSign, Bell, Plus, LayoutDashboard, List, PieChart, LogOut, Search, Filter, Camera, X, ChevronRight, ChevronDown, Settings, Trash2, Menu, Edit2, AlertCircle, Download, Paperclip } from "lucide-react";
+import { DollarSign, Bell, Plus, LayoutDashboard, List, LogOut, Search, Filter, Camera, X, ChevronDown, Settings, Trash2, Menu, Edit2, AlertCircle, Download, Paperclip } from "lucide-react";
 import { cn, formatCurrency } from "@/src/lib/utils";
-import { MOCK_USERS, MOCK_EXPENSES } from "@/src/mockData";
 import { User, Expense } from "@/src/types";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { supabase } from "@/src/lib/supabase";
+import * as db from "@/src/lib/db";
+import type { Category } from "@/src/lib/db";
 
-const INITIAL_CATEGORIES = [
+const INITIAL_CATEGORIES: Category[] = [
   { name: "Alimentação", color: "#f87171", initials: "AL" },
   { name: "Transporte", color: "#60a5fa", initials: "TR" },
   { name: "Escritório", color: "#c084fc", initials: "ES" },
@@ -35,17 +37,17 @@ const GlassCard = ({ children, className, delay = 0 }: GlassCardProps) => (
 
 // --- Category Settings Modal ---
 
-const CategorySettingsModal = ({ 
-  isOpen, 
-  onClose, 
-  categories, 
-  onAdd, 
+const CategorySettingsModal = ({
+  isOpen,
+  onClose,
+  categories,
+  onAdd,
   onDelete,
   onEdit
-}: { 
-  isOpen: boolean, 
+}: {
+  isOpen: boolean,
   onClose: () => void,
-  categories: { name: string, color: string, initials: string }[],
+  categories: Category[],
   onAdd: (name: string) => void,
   onDelete: (name: string) => void,
   onEdit: (oldName: string, newName: string) => void
@@ -525,7 +527,7 @@ interface ExportModalProps {
   isOpen: boolean;
   onClose: () => void;
   expenses: Expense[];
-  categories: { name: string; color: string; initials: string }[];
+  categories: Category[];
 }
 
 const ExportModal = ({ isOpen, onClose, expenses, categories }: ExportModalProps) => {
@@ -1419,14 +1421,70 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }: {
 // --- Login Screen ---
 
 const LoginScreen = ({ onLogin }: { onLogin: (user: User) => void }) => {
+  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [signUpSuccess, setSignUpSuccess] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate login with the first mock user
-    onLogin(MOCK_USERS[0]);
+    setError(null);
+    setLoading(true);
+
+    try {
+      if (isSignUp) {
+        if (!name.trim()) { setError("Informe seu nome."); setLoading(false); return; }
+        const initials = name.trim().split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+        const colors = ["#3b82f6","#10b981","#f87171","#c084fc","#fbbf24","#f472b6","#2dd4bf"];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+
+        const { error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { name: name.trim(), initials, color } }
+        });
+        if (signUpError) throw signUpError;
+
+        await db.upsertUserProfile('', { name: name.trim(), initials, color });
+        setSignUpSuccess(true);
+      } else {
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInError) throw signInError;
+        if (data.user) {
+          const profile = await db.getUserProfile(data.user.id);
+          onLogin(profile ?? { id: data.user.id, name: email.split('@')[0], email, color: '#3b82f6', initials: email.slice(0,2).toUpperCase() });
+        }
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erro desconhecido';
+      if (msg.includes('Invalid login')) setError('Email ou senha incorretos.');
+      else if (msg.includes('already registered')) setError('Este email já está cadastrado.');
+      else if (msg.includes('Password should')) setError('A senha deve ter pelo menos 6 caracteres.');
+      else setError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (signUpSuccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <GlassCard className="w-full max-w-md p-10 text-center rounded-[40px]" delay={0.2}>
+          <div className="w-20 h-20 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-8">
+            <DollarSign className="w-10 h-10 text-emerald-400 stroke-[2.5]" />
+          </div>
+          <h1 className="text-2xl font-bold mb-3 tracking-tighter">Conta criada!</h1>
+          <p className="text-white/40 text-sm mb-8 leading-relaxed">Verifique seu email para confirmar o cadastro, depois faça login.</p>
+          <button onClick={() => { setIsSignUp(false); setSignUpSuccess(false); }} className="w-full h-14 btn-gradient text-white font-bold rounded-2xl">
+            Ir para o Login
+          </button>
+        </GlassCard>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
@@ -1438,10 +1496,22 @@ const LoginScreen = ({ onLogin }: { onLogin: (user: User) => void }) => {
         <p className="text-white/30 mb-10 text-xs font-bold uppercase tracking-[0.2em]">sistema de gestão financeira</p>
 
         <form onSubmit={handleSubmit} className="space-y-5">
+          {isSignUp && (
+            <div className="space-y-2 text-left">
+              <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">Seu Nome</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ex: Thiago Vieira"
+                className="w-full h-14 glass rounded-2xl px-5 outline-none focus:border-blue-500/50 transition-colors placeholder:text-white/10"
+              />
+            </div>
+          )}
           <div className="space-y-2 text-left">
             <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">Email de Acesso</label>
-            <input 
-              type="email" 
+            <input
+              type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="seu@dominio.com"
@@ -1450,23 +1520,33 @@ const LoginScreen = ({ onLogin }: { onLogin: (user: User) => void }) => {
           </div>
           <div className="space-y-2 text-left">
             <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">Chave de Segurança</label>
-            <input 
-              type="password" 
+            <input
+              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               className="w-full h-14 glass rounded-2xl px-5 outline-none focus:border-blue-500/50 transition-colors placeholder:text-white/10"
             />
           </div>
-          <button 
+          {error && (
+            <p className="text-red-400 text-xs font-bold text-left px-1">{error}</p>
+          )}
+          <button
             type="submit"
-            className="w-full h-14 btn-gradient text-white font-bold rounded-2xl mt-4 text-lg"
+            disabled={loading}
+            className="w-full h-14 btn-gradient text-white font-bold rounded-2xl mt-4 text-lg disabled:opacity-50 disabled:pointer-events-none"
           >
-            Acessar Painel
+            {loading ? 'Aguarde...' : isSignUp ? 'Criar Conta' : 'Acessar Painel'}
           </button>
         </form>
 
-
+        <button
+          type="button"
+          onClick={() => { setIsSignUp(!isSignUp); setError(null); }}
+          className="mt-6 text-xs text-white/30 hover:text-white/60 transition-colors font-bold"
+        >
+          {isSignUp ? 'Já tenho conta — fazer login' : 'Não tenho conta — criar agora'}
+        </button>
       </GlassCard>
     </div>
   );
@@ -1474,13 +1554,13 @@ const LoginScreen = ({ onLogin }: { onLogin: (user: User) => void }) => {
 
 // --- Expense Modal (Bottom Sheet) ---
 
-const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: { 
-  isOpen: boolean, 
-  onClose: () => void, 
+const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
+  isOpen: boolean,
+  onClose: () => void,
   user: User,
   expense?: Expense | null,
   onSave: (expense: Omit<Expense, 'id' | 'userId' | 'createdAt'> & { id?: string }) => void,
-  categories: { name: string, color: string, initials: string }[]
+  categories: Category[]
 }) => {
   const [name, setName] = useState(expense?.name || "");
   const [value, setValue] = useState(expense?.value.toString() || "");
@@ -1489,6 +1569,7 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [attachmentUrl, setAttachmentUrl] = useState(expense?.attachmentUrl || "");
 
+  const [uploadingFile, setUploadingFile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -1509,15 +1590,18 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
     }
   }, [expense, isOpen, categories]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setAttachmentUrl(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    setUploadingFile(true);
+    try {
+      const url = await db.uploadReceipt(file, user.id);
+      setAttachmentUrl(url);
+    } catch {
+      alert('Erro ao enviar comprovante. Tente novamente.');
+    } finally {
+      setUploadingFile(false);
+    }
   };
 
   const selectedCategory = categories.find(c => c.name === category) || categories[0] || { name: 'Outros', color: '#94a3b8' };
@@ -1681,19 +1765,21 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
                   <div className="grid grid-cols-2 gap-3.5">
                     <button
                       type="button"
+                      disabled={uploadingFile}
                       onClick={() => fileInputRef.current?.click()}
-                      className="h-16 glass rounded-2xl text-white/40 hover:text-white hover:border-white/20 transition-all border-dashed flex flex-col items-center justify-center gap-1 text-[10px] font-bold uppercase tracking-widest cursor-pointer group"
+                      className="h-16 glass rounded-2xl text-white/40 hover:text-white hover:border-white/20 transition-all border-dashed flex flex-col items-center justify-center gap-1 text-[10px] font-bold uppercase tracking-widest cursor-pointer group disabled:opacity-50"
                     >
                       <Paperclip className="w-4 h-4 opacity-40 group-hover:opacity-100 group-hover:text-blue-400 transition-all" />
-                      <span>Anexar Arquivo</span>
+                      <span>{uploadingFile ? 'Enviando...' : 'Anexar Arquivo'}</span>
                     </button>
                     <button
                       type="button"
+                      disabled={uploadingFile}
                       onClick={() => cameraInputRef.current?.click()}
-                      className="h-16 glass rounded-2xl text-white/40 hover:text-white hover:border-white/20 transition-all border-dashed flex flex-col items-center justify-center gap-1 text-[10px] font-bold uppercase tracking-widest cursor-pointer group"
+                      className="h-16 glass rounded-2xl text-white/40 hover:text-white hover:border-white/20 transition-all border-dashed flex flex-col items-center justify-center gap-1 text-[10px] font-bold uppercase tracking-widest cursor-pointer group disabled:opacity-50"
                     >
                       <Camera className="w-4 h-4 opacity-40 group-hover:opacity-100 group-hover:text-emerald-400 transition-all" />
-                      <span>Tirar Foto</span>
+                      <span>{uploadingFile ? 'Enviando...' : 'Tirar Foto'}</span>
                     </button>
                   </div>
                 )}
@@ -1730,13 +1816,14 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
 
 // --- Expense Detail Modal ---
 
-const ExpenseDetailModal = ({ isOpen, onClose, expense, onEdit, onDelete, categories }: { 
-  isOpen: boolean, 
-  onClose: () => void, 
+const ExpenseDetailModal = ({ isOpen, onClose, expense, onEdit, onDelete, categories, users }: {
+  isOpen: boolean,
+  onClose: () => void,
   expense: Expense | null,
   onEdit: (expense: Expense) => void,
   onDelete: (expense: Expense) => void,
-  categories: { name: string, color: string, initials: string }[]
+  categories: Category[],
+  users: User[]
 }) => {
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
 
@@ -1747,7 +1834,7 @@ const ExpenseDetailModal = ({ isOpen, onClose, expense, onEdit, onDelete, catego
   }, [isOpen]);
 
   if (!expense) return null;
-  const owner = MOCK_USERS.find(u => u.id === expense.userId);
+  const owner = users.find(u => u.id === expense.userId);
 
   return (
     <AnimatePresence>
@@ -1912,8 +1999,22 @@ const ptBRMonths = [
 ];
 
 const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void }) => {
-  const [expenses, setExpenses] = useState<Expense[]>(MOCK_EXPENSES);
-  const [categories, setCategories] = useState(INITIAL_CATEGORIES);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [users, setUsers] = useState<User[]>([user]);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  useEffect(() => {
+    setDataLoading(true);
+    Promise.all([db.getExpenses(), db.getCategories(), db.getUsers()])
+      .then(([exps, cats, usrs]) => {
+        setExpenses(exps);
+        setCategories(cats.length ? cats : INITIAL_CATEGORIES);
+        setUsers(usrs.length ? usrs : [user]);
+      })
+      .catch(console.error)
+      .finally(() => setDataLoading(false));
+  }, [user.id]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
@@ -2003,53 +2104,48 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
     setExpenseToDelete(expense);
   };
 
-  const handleSaveExpense = (newExpenseData: Omit<Expense, 'id' | 'userId' | 'createdAt'> & { id?: string }) => {
+  const handleSaveExpense = async (newExpenseData: Omit<Expense, 'id' | 'userId' | 'createdAt'> & { id?: string }) => {
     if (newExpenseData.id) {
-      // Editing
-      setExpenses(prev => prev.map(e => e.id === newExpenseData.id ? {
-        ...e,
-        ...newExpenseData as Expense
-      } : e));
+      const { id, ...updates } = newExpenseData;
+      await db.updateExpense(id!, updates);
+      setExpenses(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
     } else {
-      // Adding
-      const newExpense: Expense = {
-        ...newExpenseData,
-        id: Math.random().toString(36).substr(2, 9),
-        userId: user.id,
-        createdAt: new Date().toISOString()
-      } as Expense;
-      setExpenses(prev => [newExpense, ...prev]);
+      const created = await db.createExpense({ ...newExpenseData, userId: user.id });
+      setExpenses(prev => [created, ...prev]);
     }
   };
 
-  const handleAddCategory = (name: string) => {
+  const handleAddCategory = async (name: string) => {
     if (categories.find(c => c.name.toLowerCase() === name.toLowerCase())) return;
-    
     const colors = ["#f87171", "#60a5fa", "#c084fc", "#4ade80", "#fbbf24", "#f472b6", "#2dd4bf", "#fb923c"];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
-    
-    setCategories(prev => [...prev, {
-      name,
-      color: randomColor,
-      initials: name.substring(0, 2).toUpperCase()
-    }]);
+    const newCat = { name, color: randomColor, initials: name.substring(0, 2).toUpperCase() };
+    const created = await db.createCategory(newCat, user.id);
+    setCategories(prev => [...prev, created]);
   };
 
-  const handleEditCategory = (oldName: string, newName: string) => {
+  const handleEditCategory = async (oldName: string, newName: string) => {
     if (categories.find(c => c.name.toLowerCase() === newName.toLowerCase())) return;
-
-    setCategories(prev => prev.map(c => c.name === oldName ? { ...c, name: newName, initials: newName.substring(0, 2).toUpperCase() } : c));
+    const cat = categories.find(c => c.name === oldName);
+    if (!cat?.id) return;
+    const updatedInitials = newName.substring(0, 2).toUpperCase();
+    await db.updateCategory(cat.id, { name: newName, initials: updatedInitials });
+    await db.updateExpensesCategoryName(oldName, newName);
+    setCategories(prev => prev.map(c => c.name === oldName ? { ...c, name: newName, initials: updatedInitials } : c));
     setExpenses(prev => prev.map(e => e.category === oldName ? { ...e, category: newName } : e));
   };
 
-  const handleDeleteCategory = (name: string) => {
-    // Prevent deleting all categories
+  const handleDeleteCategory = async (name: string) => {
     if (categories.length <= 1) return;
+    const cat = categories.find(c => c.name === name);
+    if (!cat?.id) return;
+    await db.deleteCategory(cat.id);
     setCategories(prev => prev.filter(c => c.name !== name));
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (expenseToDelete) {
+      await db.deleteExpense(expenseToDelete.id);
       setExpenses(prev => prev.filter(e => e.id !== expenseToDelete.id));
       setExpenseToDelete(null);
       setSelectedExpense(null);
@@ -2811,13 +2907,14 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
         onSave={handleSaveExpense}
         categories={categories}
       />
-      <ExpenseDetailModal 
-        isOpen={!!selectedExpense} 
-        onClose={() => setSelectedExpense(null)} 
-        expense={selectedExpense} 
+      <ExpenseDetailModal
+        isOpen={!!selectedExpense}
+        onClose={() => setSelectedExpense(null)}
+        expense={selectedExpense}
         onEdit={handleEdit}
         onDelete={handleDelete}
         categories={categories}
+        users={users}
       />
       <CategorySettingsModal 
         isOpen={isSettingsOpen} 
@@ -2856,27 +2953,52 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  async function loadUserProfile(userId: string): Promise<User> {
+    const profile = await db.getUserProfile(userId);
+    return profile ?? { id: userId, name: 'Usuário', email: '', color: '#3b82f6', initials: 'US' };
+  }
+
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        const profile = await loadUserProfile(session.user.id);
+        setCurrentUser(profile);
+      }
+      setAuthLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        const profile = await loadUserProfile(session.user.id);
+        setCurrentUser(profile);
+      } else {
+        setCurrentUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen">
       <AnimatePresence mode="wait">
         {!currentUser ? (
-          <motion.div
-            key="login"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
+          <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <LoginScreen onLogin={setCurrentUser} />
           </motion.div>
         ) : (
-          <motion.div
-            key="app"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <DashboardScreen user={currentUser} onLogout={() => setCurrentUser(null)} />
+          <motion.div key="app" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <DashboardScreen user={currentUser} onLogout={() => supabase.auth.signOut()} />
           </motion.div>
         )}
       </AnimatePresence>
