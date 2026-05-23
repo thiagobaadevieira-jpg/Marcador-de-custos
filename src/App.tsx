@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { motion, AnimatePresence, useScroll, useTransform } from "motion/react";
-import { DollarSign, Bell, Plus, LayoutDashboard, List, LogOut, Search, Filter, Camera, X, ChevronDown, Settings, Trash2, Menu, Edit2, AlertCircle, Download, Paperclip } from "lucide-react";
+import { DollarSign, Bell, Plus, LayoutDashboard, List, LogOut, Search, Filter, Camera, X, ChevronDown, Settings, Trash2, Menu, Edit2, AlertCircle, Download, Paperclip, User as UserIcon, Check } from "lucide-react";
 import { cn, formatCurrency } from "@/src/lib/utils";
 import { User, Expense } from "@/src/types";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
@@ -1454,69 +1454,242 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }: {
   );
 };
 
+// --- Profile Modal ---
+
+interface ProfileModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  user: User;
+  email: string;
+  onSaved: (updated: User) => void;
+}
+
+const ProfileModal = ({ isOpen, onClose, user, email, onSaved }: ProfileModalProps) => {
+  const [name, setName] = useState(user.name);
+  const [photoUrl, setPhotoUrl] = useState<string | undefined>(user.photoUrl);
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setName(user.name);
+      setPhotoUrl(user.photoUrl);
+      setError(null);
+    }
+  }, [isOpen, user]);
+
+  if (!isOpen) return null;
+
+  const initials = (name.trim() || 'US')
+    .split(' ')
+    .map(w => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setError('A imagem deve ter no máximo 5MB.');
+      return;
+    }
+    setError(null);
+    setUploading(true);
+    try {
+      const url = await db.uploadAvatar(file, user.id);
+      setPhotoUrl(url);
+    } catch (err) {
+      console.error(err);
+      setError('Erro ao enviar foto. Tente novamente.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setPhotoUrl(undefined);
+  };
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      setError('Informe seu nome.');
+      return;
+    }
+    setError(null);
+    setSaving(true);
+    try {
+      await db.upsertUserProfile(user.id, {
+        name: name.trim(),
+        initials,
+        photoUrl: photoUrl ?? null,
+      });
+      onSaved({ ...user, name: name.trim(), initials, photoUrl });
+      onClose();
+    } catch (err) {
+      console.error(err);
+      setError('Não foi possível salvar. Tente novamente.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-slate-950/50 backdrop-blur-md z-[200]"
+          />
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0, y: 15 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.95, opacity: 0, y: 15 }}
+            className="fixed inset-4 m-auto max-w-sm h-fit max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none bg-[#161929]/90 backdrop-blur-2xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)]"
+          >
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-2xl font-black tracking-tight">Meu Perfil</h2>
+              <button
+                onClick={onClose}
+                className="p-3 glass rounded-2xl hover:bg-white/5 transition-colors"
+              >
+                <X className="w-5 h-5 text-white/40" />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Avatar */}
+              <div className="flex flex-col items-center gap-4">
+                <div
+                  className="relative w-28 h-28 rounded-full border-2 border-white/10 overflow-hidden flex items-center justify-center shadow-lg"
+                  style={{ backgroundColor: photoUrl ? 'transparent' : user.color }}
+                >
+                  {photoUrl ? (
+                    <img
+                      src={photoUrl}
+                      alt="Foto do perfil"
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <span className="text-3xl font-black text-white tracking-tight">{initials}</span>
+                  )}
+                  {uploading && (
+                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                      <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={uploading}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="h-10 px-4 glass rounded-xl text-xs font-bold text-white/70 hover:text-white hover:bg-white/5 transition-all flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    {photoUrl ? 'Trocar Foto' : 'Adicionar Foto'}
+                  </button>
+                  {photoUrl && (
+                    <button
+                      type="button"
+                      disabled={uploading}
+                      onClick={handleRemovePhoto}
+                      className="h-10 px-4 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-xl text-xs font-bold text-red-400 transition-all flex items-center gap-2 disabled:opacity-50"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Remover
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                />
+              </div>
+
+              {/* Nome */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Seu Nome</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Como aparece nos lançamentos"
+                  className="w-full h-14 glass rounded-2xl px-5 outline-none focus:border-blue-500/50 transition-colors text-sm font-bold placeholder:text-white/10"
+                />
+              </div>
+
+              {/* Email (bloqueado) */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1 flex items-center gap-2">
+                  <span>Email de Acesso</span>
+                  <span className="text-[8px] bg-white/5 border border-white/10 px-2 py-0.5 rounded-full text-white/40">BLOQUEADO</span>
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  readOnly
+                  className="w-full h-14 bg-white/[0.02] border border-white/5 rounded-2xl px-5 outline-none text-sm font-medium text-white/40 cursor-not-allowed"
+                />
+                <p className="text-[10px] text-white/30 leading-relaxed px-1">
+                  Para alterar o e-mail, peça ao administrador do sistema.
+                </p>
+              </div>
+
+              {error && (
+                <p className="text-red-400 text-xs font-bold px-1">{error}</p>
+              )}
+
+              <button
+                onClick={handleSave}
+                disabled={saving || uploading}
+                className="w-full h-14 btn-gradient text-white font-black rounded-2xl text-sm shadow-lg active:scale-95 transition-all uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
+              >
+                <Check className="w-4 h-4" />
+                {saving ? 'Salvando...' : 'Salvar Alterações'}
+              </button>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+};
+
 // --- Login Screen ---
 
-const LoginScreen = ({ onLogin }: { onLogin: (user: User) => void }) => {
-  const [isSignUp, setIsSignUp] = useState(false);
+const LoginScreen = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [signUpSuccess, setSignUpSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
-
     try {
-      if (isSignUp) {
-        if (!name.trim()) { setError("Informe seu nome."); setLoading(false); return; }
-        const initials = name.trim().split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-        const colors = ["#3b82f6","#10b981","#f87171","#c084fc","#fbbf24","#f472b6","#2dd4bf"];
-        const color = colors[Math.floor(Math.random() * colors.length)];
-
-        const { error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { name: name.trim(), initials, color } }
-        });
-        if (signUpError) throw signUpError;
-        // O trigger handle_new_user no Supabase cria o user_profiles automaticamente
-        setSignUpSuccess(true);
-      } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-        if (signInError) throw signInError;
-        // onAuthStateChange no App irá detectar SIGNED_IN e chamar setCurrentUser automaticamente
-      }
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) throw signInError;
+      // onAuthStateChange no App detecta SIGNED_IN e chama setCurrentUser
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro desconhecido';
       if (msg.includes('Invalid login')) setError('Email ou senha incorretos.');
-      else if (msg.includes('already registered')) setError('Este email já está cadastrado.');
-      else if (msg.includes('Password should')) setError('A senha deve ter pelo menos 6 caracteres.');
       else setError(msg);
     } finally {
       setLoading(false);
     }
   };
-
-  if (signUpSuccess) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <GlassCard className="w-full max-w-md p-10 text-center rounded-[40px]" delay={0.2}>
-          <div className="w-20 h-20 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-8">
-            <DollarSign className="w-10 h-10 text-emerald-400 stroke-[2.5]" />
-          </div>
-          <h1 className="text-2xl font-bold mb-3 tracking-tighter">Conta criada!</h1>
-          <p className="text-white/40 text-sm mb-8 leading-relaxed">Verifique seu email para confirmar o cadastro, depois faça login.</p>
-          <button onClick={() => { setIsSignUp(false); setSignUpSuccess(false); }} className="w-full h-14 btn-gradient text-white font-bold rounded-2xl">
-            Ir para o Login
-          </button>
-        </GlassCard>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
@@ -1528,18 +1701,6 @@ const LoginScreen = ({ onLogin }: { onLogin: (user: User) => void }) => {
         <p className="text-white/30 mb-10 text-xs font-bold uppercase tracking-[0.2em]">sistema de gestão financeira</p>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {isSignUp && (
-            <div className="space-y-2 text-left">
-              <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">Seu Nome</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Ex: Thiago Vieira"
-                className="w-full h-14 glass rounded-2xl px-5 outline-none focus:border-blue-500/50 transition-colors placeholder:text-white/10"
-              />
-            </div>
-          )}
           <div className="space-y-2 text-left">
             <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">Email de Acesso</label>
             <input
@@ -1568,17 +1729,9 @@ const LoginScreen = ({ onLogin }: { onLogin: (user: User) => void }) => {
             disabled={loading}
             className="w-full h-14 btn-gradient text-white font-bold rounded-2xl mt-4 text-lg disabled:opacity-50 disabled:pointer-events-none"
           >
-            {loading ? 'Aguarde...' : isSignUp ? 'Criar Conta' : 'Acessar Painel'}
+            {loading ? 'Aguarde...' : 'Acessar Painel'}
           </button>
         </form>
-
-        <button
-          type="button"
-          onClick={() => { setIsSignUp(!isSignUp); setError(null); }}
-          className="mt-6 text-xs text-white/30 hover:text-white/60 transition-colors font-bold"
-        >
-          {isSignUp ? 'Já tenho conta — fazer login' : 'Não tenho conta — criar agora'}
-        </button>
       </GlassCard>
     </div>
   );
@@ -2030,7 +2183,7 @@ const ptBRMonths = [
   { value: "11", label: "Dezembro" }
 ];
 
-const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void }) => {
+const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLogout: () => void, onProfileUpdate: (u: User) => void }) => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [users, setUsers] = useState<User[]>([user]);
@@ -2061,6 +2214,7 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
     return localStorage.getItem('notifications_enabled') === 'true';
@@ -2390,7 +2544,22 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
                 exit={{ opacity: 0, scale: 0.95, y: 10 }}
                 className="absolute top-full right-0 mt-3 w-56 bg-[#161929]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl p-2 z-[90] overflow-hidden"
               >
-                  <button 
+                  <button
+                    onClick={() => {
+                      setIsProfileOpen(true);
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 hover:text-blue-400 transition-all text-sm font-bold text-white/60 text-left group/profile"
+                  >
+                    {user.photoUrl ? (
+                      <img src={user.photoUrl} alt="" className="w-5 h-5 rounded-full object-cover border border-white/10" />
+                    ) : (
+                      <UserIcon className="w-4 h-4 group-hover/profile:scale-110 transition-transform" />
+                    )}
+                    <span>Perfil</span>
+                  </button>
+
+                  <button
                     onClick={() => {
                       setIsSettingsOpen(true);
                       setIsMenuOpen(false);
@@ -3041,12 +3210,23 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
         message={notificationMessage}
         onMessageChange={handleNotificationMessageChange}
       />
-      <ConfirmationModal 
+      <ConfirmationModal
         isOpen={!!expenseToDelete}
         onClose={() => setExpenseToDelete(null)}
         onConfirm={confirmDelete}
         title="Excluir Registro?"
         message="Esta ação não pode ser desfeita. O gasto selecionado será removido permanentemente do relatório."
+      />
+      <ProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        user={user}
+        email={user.email}
+        onSaved={(updated) => {
+          onProfileUpdate(updated);
+          // Atualiza também a lista de users carregada para refletir nome/foto novos
+          setUsers(prev => prev.map(u => u.id === updated.id ? updated : u));
+        }}
       />
     </div>
   );
@@ -3058,9 +3238,10 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  async function loadUserProfile(userId: string): Promise<User> {
+  async function loadUserProfile(userId: string, sessionEmail: string = ''): Promise<User> {
     const profile = await db.getUserProfile(userId);
-    return profile ?? { id: userId, name: 'Usuário', email: '', color: '#3b82f6', initials: 'US' };
+    if (profile) return { ...profile, email: sessionEmail };
+    return { id: userId, name: 'Usuário', email: sessionEmail, color: '#3b82f6', initials: 'US' };
   }
 
   useEffect(() => {
@@ -3070,7 +3251,7 @@ export default function App() {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       clearTimeout(timeout);
       if (session?.user) {
-        const profile = await loadUserProfile(session.user.id);
+        const profile = await loadUserProfile(session.user.id, session.user.email ?? '');
         setCurrentUser(profile);
       }
       setAuthLoading(false);
@@ -3098,7 +3279,7 @@ export default function App() {
         // Depois, fora do lock, busca o perfil completo
         setTimeout(async () => {
           try {
-            const profile = await loadUserProfile(session.user.id);
+            const profile = await loadUserProfile(session.user.id, session.user.email ?? '');
             setCurrentUser(profile);
           } catch (err) {
             console.error('Falha ao carregar perfil:', err);
@@ -3125,11 +3306,11 @@ export default function App() {
       <AnimatePresence mode="wait">
         {!currentUser ? (
           <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <LoginScreen onLogin={setCurrentUser} />
+            <LoginScreen />
           </motion.div>
         ) : (
           <motion.div key="app" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <DashboardScreen user={currentUser} onLogout={() => supabase.auth.signOut()} />
+            <DashboardScreen user={currentUser} onLogout={() => supabase.auth.signOut()} onProfileUpdate={setCurrentUser} />
           </motion.div>
         )}
       </AnimatePresence>

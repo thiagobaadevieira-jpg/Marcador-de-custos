@@ -4,6 +4,7 @@ export interface User {
   email: string;
   color: string;
   initials: string;
+  photoUrl?: string;
 }
 
 export interface Expense {

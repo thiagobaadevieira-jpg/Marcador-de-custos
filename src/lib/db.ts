@@ -136,6 +136,7 @@ export async function getUsers(): Promise<User[]> {
     email: '',
     color: row.color as string,
     initials: row.initials as string,
+    photoUrl: row.photo_url ? (row.photo_url as string) : undefined,
   }));
 }
 
@@ -152,19 +153,36 @@ export async function getUserProfile(userId: string): Promise<User | null> {
     email: '',
     color: data.color as string,
     initials: data.initials as string,
+    photoUrl: data.photo_url ? (data.photo_url as string) : undefined,
   };
 }
 
 export async function upsertUserProfile(
   userId: string,
-  profile: { name: string; color: string; initials: string }
+  profile: { name?: string; color?: string; initials?: string; photoUrl?: string | null }
 ): Promise<void> {
-  const { error } = await supabase.from('user_profiles').upsert({
+  const payload: Record<string, unknown> = {
     id: userId,
-    ...profile,
     updated_at: new Date().toISOString(),
-  });
+  };
+  if (profile.name !== undefined) payload.name = profile.name;
+  if (profile.color !== undefined) payload.color = profile.color;
+  if (profile.initials !== undefined) payload.initials = profile.initials;
+  if (profile.photoUrl !== undefined) payload.photo_url = profile.photoUrl;
+
+  const { error } = await supabase.from('user_profiles').upsert(payload);
   if (error) throw error;
+}
+
+export async function uploadAvatar(file: File, userId: string): Promise<string> {
+  const ext = file.name.split('.').pop() ?? 'jpg';
+  const path = `${userId}/${Date.now()}.${ext}`;
+  const { error } = await supabase.storage
+    .from('avatars')
+    .upload(path, file, { upsert: false, cacheControl: '3600' });
+  if (error) throw error;
+  const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+  return data.publicUrl;
 }
 
 // ─── App Settings (team-wide singleton) ─────────────────────────────────────
