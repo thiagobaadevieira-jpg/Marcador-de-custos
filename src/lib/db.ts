@@ -167,6 +167,51 @@ export async function upsertUserProfile(
   if (error) throw error;
 }
 
+// ─── App Settings (team-wide singleton) ─────────────────────────────────────
+
+const APP_SETTINGS_ID = '00000000-0000-0000-0000-000000000001';
+
+export type AppSettings = {
+  notificationTitle: string;
+  notificationMessage: string;
+};
+
+export async function getAppSettings(): Promise<AppSettings> {
+  const { data, error } = await supabase
+    .from('app_settings')
+    .select('notification_title, notification_message')
+    .eq('id', APP_SETTINGS_ID)
+    .single();
+  if (error || !data) {
+    return {
+      notificationTitle: 'Controle de Gastos',
+      notificationMessage: 'Você lembrou de anotar os seus gastos hoje?',
+    };
+  }
+  return {
+    notificationTitle: data.notification_title as string,
+    notificationMessage: data.notification_message as string,
+  };
+}
+
+export async function updateAppSettings(
+  updates: Partial<AppSettings>,
+  userId: string
+): Promise<void> {
+  const payload: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+    updated_by: userId,
+  };
+  if (updates.notificationTitle !== undefined) payload.notification_title = updates.notificationTitle;
+  if (updates.notificationMessage !== undefined) payload.notification_message = updates.notificationMessage;
+
+  const { error } = await supabase
+    .from('app_settings')
+    .update(payload)
+    .eq('id', APP_SETTINGS_ID);
+  if (error) throw error;
+}
+
 // ─── Storage ─────────────────────────────────────────────────────────────────
 
 export async function uploadReceipt(file: File, userId: string): Promise<string> {

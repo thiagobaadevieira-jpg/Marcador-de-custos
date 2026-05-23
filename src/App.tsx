@@ -2040,11 +2040,13 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
   const loadData = () => {
     setDataLoading(true);
     setDataError(null);
-    Promise.all([db.getExpenses(), db.getCategories(), db.getUsers()])
-      .then(([exps, cats, usrs]) => {
+    Promise.all([db.getExpenses(), db.getCategories(), db.getUsers(), db.getAppSettings()])
+      .then(([exps, cats, usrs, settings]) => {
         setExpenses(exps);
         setCategories(cats.length ? cats : INITIAL_CATEGORIES);
         setUsers(usrs.length ? usrs : [user]);
+        setNotificationTitle(settings.notificationTitle);
+        setNotificationMessage(settings.notificationMessage);
       })
       .catch((err) => {
         console.error(err);
@@ -2066,12 +2068,10 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
   const [notificationTime, setNotificationTime] = useState(() => {
     return localStorage.getItem('notification_time') || '20:00';
   });
-  const [notificationTitle, setNotificationTitle] = useState(() => {
-    return localStorage.getItem('notification_title') || 'Controle de Gastos';
-  });
-  const [notificationMessage, setNotificationMessage] = useState(() => {
-    return localStorage.getItem('notification_message') || 'Você lembrou de anotar os seus gastos hoje? Mantenha sua saúde financeira em dia! 📊';
-  });
+  // Título/mensagem das notificações agora vêm do Supabase (compartilhado pelo time)
+  const [notificationTitle, setNotificationTitle] = useState('Controle de Gastos');
+  const [notificationMessage, setNotificationMessage] = useState('Você lembrou de anotar os seus gastos hoje?');
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleNotificationsToggle = (enabledVal: boolean) => {
     setNotificationsEnabled(enabledVal);
@@ -2083,14 +2083,22 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
     localStorage.setItem('notification_time', timeVal);
   };
 
+  // Debounced save para Supabase — evita uma requisição por tecla digitada
+  const scheduleSettingsSave = (updates: Partial<db.AppSettings>) => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      db.updateAppSettings(updates, user.id).catch(err => console.error('Falha ao salvar config:', err));
+    }, 600);
+  };
+
   const handleNotificationTitleChange = (val: string) => {
     setNotificationTitle(val);
-    localStorage.setItem('notification_title', val);
+    scheduleSettingsSave({ notificationTitle: val });
   };
 
   const handleNotificationMessageChange = (val: string) => {
     setNotificationMessage(val);
-    localStorage.setItem('notification_message', val);
+    scheduleSettingsSave({ notificationMessage: val });
   };
 
   // Background scheduler for reminders
