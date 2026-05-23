@@ -564,9 +564,10 @@ interface ExportModalProps {
   onClose: () => void;
   expenses: Expense[];
   categories: Category[];
+  users: User[];
 }
 
-const ExportModal = ({ isOpen, onClose, expenses, categories }: ExportModalProps) => {
+const ExportModal = ({ isOpen, onClose, expenses, categories, users }: ExportModalProps) => {
   const [exportPeriod, setExportPeriod] = useState<"all" | "7days" | "30days" | "month">("all");
   const [selectedExportMonth, setSelectedExportMonth] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -655,21 +656,34 @@ const ExportModal = ({ isOpen, onClose, expenses, categories }: ExportModalProps
       `;
     }).join('');
 
+    const escapeHtml = (s: string) =>
+      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
     const tableRowsHTML = filteredExportExpenses.map(e => {
       const d = new Date(e.createdAt);
       const formattedDate = d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
       const catObj = categories.find(c => c.name === e.category) || { color: '#94a3b8' };
+      const owner = users.find(u => u.id === e.userId);
+      const ownerName = owner?.name ?? '—';
+      const ownerColor = owner?.color ?? '#94a3b8';
+      const ownerInitials = owner?.initials ?? '?';
 
       return `
         <tr>
           <td>
-            <div class="table-expense-name">${e.name}</div>
-            ${e.note ? `<div class="table-note">"${e.note}"</div>` : ''}
+            <div class="table-expense-name">${escapeHtml(e.name)}</div>
+            ${e.note ? `<div class="table-note">"${escapeHtml(e.note)}"</div>` : ''}
           </td>
           <td>
             <div class="table-tag" style="background-color: ${catObj.color}15; color: ${catObj.color}; border: 1px solid ${catObj.color}30">
               <span class="tag-dot" style="background-color: ${catObj.color}"></span>
-              ${e.category}
+              ${escapeHtml(e.category)}
+            </div>
+          </td>
+          <td>
+            <div class="owner-cell">
+              <span class="owner-avatar" style="background-color: ${ownerColor}">${escapeHtml(ownerInitials)}</span>
+              <span class="owner-name">${escapeHtml(ownerName)}</span>
             </div>
           </td>
           <td><span class="table-date">${formattedDate}</span></td>
@@ -791,6 +805,12 @@ const ExportModal = ({ isOpen, onClose, expenses, categories }: ExportModalProps
         color: #475569 !important;
       }
       .stat-info .dot {
+        border: 1px solid rgba(0,0,0,0.1) !important;
+      }
+      .owner-name {
+        color: #0f172a !important;
+      }
+      .owner-avatar {
         border: 1px solid rgba(0,0,0,0.1) !important;
       }
     }
@@ -1050,10 +1070,41 @@ const ExportModal = ({ isOpen, onClose, expenses, categories }: ExportModalProps
     }
 
     /* Larguras fixas: economiza papel e força quebra de linha */
-    th:nth-child(1), td:nth-child(1) { width: 46%; }
-    th:nth-child(2), td:nth-child(2) { width: 22%; }
-    th:nth-child(3), td:nth-child(3) { width: 14%; }
-    th:nth-child(4), td:nth-child(4) { width: 18%; }
+    th:nth-child(1), td:nth-child(1) { width: 36%; }
+    th:nth-child(2), td:nth-child(2) { width: 18%; }
+    th:nth-child(3), td:nth-child(3) { width: 18%; }
+    th:nth-child(4), td:nth-child(4) { width: 12%; }
+    th:nth-child(5), td:nth-child(5) { width: 16%; }
+
+    .owner-cell {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .owner-avatar {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 900;
+      color: #ffffff;
+      flex-shrink: 0;
+      letter-spacing: 0;
+    }
+
+    .owner-name {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.85);
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
 
     th {
       text-align: left;
@@ -1201,12 +1252,13 @@ const ExportModal = ({ isOpen, onClose, expenses, categories }: ExportModalProps
             <tr>
               <th>Custo / Descrição</th>
               <th>Categoria</th>
+              <th>Responsável</th>
               <th>Data</th>
               <th style="text-align: right;">Total (R$)</th>
             </tr>
           </thead>
           <tbody>
-            ${filteredExportExpenses.length === 0 ? '<tr><td colspan="4" style="text-align:center; padding: 40px; color:var(--text-soft)">Nenhum lançamento encontrado neste período.</td></tr>' : tableRowsHTML}
+            ${filteredExportExpenses.length === 0 ? '<tr><td colspan="5" style="text-align:center; padding: 40px; color:var(--text-soft)">Nenhum lançamento encontrado neste período.</td></tr>' : tableRowsHTML}
           </tbody>
         </table>
       </div>
@@ -3247,11 +3299,12 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
         onDelete={handleDeleteCategory}
         onEdit={handleEditCategory}
       />
-      <ExportModal 
+      <ExportModal
         isOpen={isExportOpen}
         onClose={() => setIsExportOpen(false)}
         expenses={expenses}
         categories={categories}
+        users={users}
       />
       <NotificationSettingsModal
         isOpen={isNotificationsOpen}
