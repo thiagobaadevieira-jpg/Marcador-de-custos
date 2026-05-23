@@ -1447,16 +1447,12 @@ const LoginScreen = ({ onLogin }: { onLogin: (user: User) => void }) => {
           options: { data: { name: name.trim(), initials, color } }
         });
         if (signUpError) throw signUpError;
-
-        await db.upsertUserProfile('', { name: name.trim(), initials, color });
+        // O trigger handle_new_user no Supabase cria o user_profiles automaticamente
         setSignUpSuccess(true);
       } else {
-        const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
         if (signInError) throw signInError;
-        if (data.user) {
-          const profile = await db.getUserProfile(data.user.id);
-          onLogin(profile ?? { id: data.user.id, name: email.split('@')[0], email, color: '#3b82f6', initials: email.slice(0,2).toUpperCase() });
-        }
+        // onAuthStateChange no App irá detectar SIGNED_IN e chamar setCurrentUser automaticamente
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro desconhecido';
@@ -3019,8 +3015,19 @@ export default function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
-        const profile = await loadUserProfile(session.user.id);
-        setCurrentUser(profile);
+        try {
+          const profile = await loadUserProfile(session.user.id);
+          setCurrentUser(profile);
+        } catch {
+          // Se o carregamento do perfil falhar, usa dados básicos da sessão
+          setCurrentUser({
+            id: session.user.id,
+            name: session.user.email?.split('@')[0] ?? 'Usuário',
+            email: session.user.email ?? '',
+            color: '#3b82f6',
+            initials: (session.user.email ?? 'US').slice(0, 2).toUpperCase(),
+          });
+        }
       } else {
         setCurrentUser(null);
       }
