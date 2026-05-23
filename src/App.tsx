@@ -195,6 +195,10 @@ interface NotificationSettingsModalProps {
   onToggle: (enabled: boolean) => void;
   time: string;
   onTimeChange: (time: string) => void;
+  title: string;
+  onTitleChange: (title: string) => void;
+  message: string;
+  onMessageChange: (message: string) => void;
 }
 
 const NotificationSettingsModal = ({
@@ -203,7 +207,11 @@ const NotificationSettingsModal = ({
   enabled,
   onToggle,
   time,
-  onTimeChange
+  onTimeChange,
+  title,
+  onTitleChange,
+  message,
+  onMessageChange
 }: NotificationSettingsModalProps) => {
   const [permissionState, setPermissionState] = useState<NotificationPermission>("default");
   const [activeDropdown, setActiveDropdown] = useState<'hour' | 'minute' | null>(null);
@@ -240,9 +248,9 @@ const NotificationSettingsModal = ({
       const permission = await Notification.requestPermission();
       setPermissionState(permission);
       if (permission === 'granted') {
-        new Notification("Controle de Gastos", {
+        new Notification(title || "Controle de Gastos", {
           body: "Lembretes diários ativados com sucesso! 🔔",
-          icon: "/icon.svg"
+          icon: "/icon-192.png"
         });
       }
     } catch (err) {
@@ -264,20 +272,22 @@ const NotificationSettingsModal = ({
       alert("As notificações nativas não são suportadas neste navegador.");
       return;
     }
+    const previewTitle = title.trim() || "Controle de Gastos";
+    const previewBody = message.trim() || "Seu lembrete de teste está funcionando! 🤝";
     if (Notification.permission !== 'granted') {
       Notification.requestPermission().then(perm => {
         setPermissionState(perm);
         if (perm === 'granted') {
-          new Notification("Controle de Gastos", {
-            body: "Seu lembrete de teste está funcionando! Muito bem! 🤝",
-            icon: "/icon.svg"
+          new Notification(previewTitle, {
+            body: previewBody,
+            icon: "/icon-192.png"
           });
         }
       });
     } else {
-      new Notification("Controle de Gastos", {
-        body: "Seu lembrete de teste está funcionando! Muito bem! 🤝",
-        icon: "/icon.svg"
+      new Notification(previewTitle, {
+        body: previewBody,
+        icon: "/icon-192.png"
       });
     }
   };
@@ -332,6 +342,32 @@ const NotificationSettingsModal = ({
                     Ajuda você a lembrar de anotar seus gastos. Se você já tiver cadastrado qualquer despesa hoje, nós não te incomodamos!
                   </p>
                 </div>
+              </div>
+
+              {/* Custom title & message */}
+              <div className="space-y-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1 text-left">Título do Aviso</p>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => onTitleChange(e.target.value)}
+                  maxLength={50}
+                  placeholder="Ex: Controle de Gastos"
+                  className="w-full h-12 glass rounded-2xl px-5 outline-none focus:border-blue-500/50 transition-colors text-sm font-bold placeholder:text-white/10"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1 text-left">Mensagem do Aviso</p>
+                <textarea
+                  value={message}
+                  onChange={(e) => onMessageChange(e.target.value)}
+                  maxLength={150}
+                  rows={3}
+                  placeholder="Ex: Você lembrou de anotar seus gastos hoje?"
+                  className="w-full glass rounded-2xl px-5 py-3 outline-none focus:border-blue-500/50 transition-colors text-sm font-medium placeholder:text-white/10 resize-none"
+                />
+                <p className="text-[9px] text-white/20 text-right pr-1">{message.length}/150</p>
               </div>
 
               <div className="flex items-center justify-between p-4 glass rounded-2xl">
@@ -2030,6 +2066,12 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
   const [notificationTime, setNotificationTime] = useState(() => {
     return localStorage.getItem('notification_time') || '20:00';
   });
+  const [notificationTitle, setNotificationTitle] = useState(() => {
+    return localStorage.getItem('notification_title') || 'Controle de Gastos';
+  });
+  const [notificationMessage, setNotificationMessage] = useState(() => {
+    return localStorage.getItem('notification_message') || 'Você lembrou de anotar os seus gastos hoje? Mantenha sua saúde financeira em dia! 📊';
+  });
 
   const handleNotificationsToggle = (enabledVal: boolean) => {
     setNotificationsEnabled(enabledVal);
@@ -2039,6 +2081,16 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
   const handleNotificationsTimeChange = (timeVal: string) => {
     setNotificationTime(timeVal);
     localStorage.setItem('notification_time', timeVal);
+  };
+
+  const handleNotificationTitleChange = (val: string) => {
+    setNotificationTitle(val);
+    localStorage.setItem('notification_title', val);
+  };
+
+  const handleNotificationMessageChange = (val: string) => {
+    setNotificationMessage(val);
+    localStorage.setItem('notification_message', val);
   };
 
   // Background scheduler for reminders
@@ -2061,26 +2113,28 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
           });
 
           if (!hasExpensesToday) {
+            const notifTitle = notificationTitle.trim() || "Controle de Gastos";
+            const notifBody = notificationMessage.trim() || "Você lembrou de anotar os seus gastos hoje? 📊";
             if ('Notification' in window && Notification.permission === 'granted') {
               try {
                 navigator.serviceWorker.ready.then((registration) => {
-                  registration.showNotification("Controle de Gastos", {
-                    body: "Você lembrou de anotar os seus gastos hoje? Mantenha sua saúde financeira em dia! 📊",
-                    icon: "/icon.svg",
-                    badge: "/icon.svg",
+                  registration.showNotification(notifTitle, {
+                    body: notifBody,
+                    icon: "/icon-192.png",
+                    badge: "/icon-192.png",
                     vibrate: [200, 100, 200],
                     tag: "remind-gastos"
                   } as any);
                 }).catch(() => {
-                  new Notification("Controle de Gastos", {
-                    body: "Você lembrou de anotar os seus gastos hoje? Mantenha sua saúde financeira em dia! 📊",
-                    icon: "/icon.svg"
+                  new Notification(notifTitle, {
+                    body: notifBody,
+                    icon: "/icon-192.png"
                   });
                 });
               } catch (err) {
-                new Notification("Controle de Gastos", {
-                  body: "Você lembrou de anotar os seus gastos hoje? Mantenha sua saúde financeira em dia! 📊",
-                  icon: "/icon.svg"
+                new Notification(notifTitle, {
+                  body: notifBody,
+                  icon: "/icon-192.png"
                 });
               }
             }
@@ -2091,7 +2145,7 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
     }, 15000);
 
     return () => clearInterval(interval);
-  }, [notificationsEnabled, notificationTime, expenses]);
+  }, [notificationsEnabled, notificationTime, expenses, notificationTitle, notificationMessage]);
 
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [expenseToEdit, setExpenseToEdit] = useState<Expense | null>(null);
@@ -2967,13 +3021,17 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
         expenses={expenses}
         categories={categories}
       />
-      <NotificationSettingsModal 
+      <NotificationSettingsModal
         isOpen={isNotificationsOpen}
         onClose={() => setIsNotificationsOpen(false)}
         enabled={notificationsEnabled}
         onToggle={handleNotificationsToggle}
         time={notificationTime}
         onTimeChange={handleNotificationsTimeChange}
+        title={notificationTitle}
+        onTitleChange={handleNotificationTitleChange}
+        message={notificationMessage}
+        onMessageChange={handleNotificationMessageChange}
       />
       <ConfirmationModal 
         isOpen={!!expenseToDelete}
