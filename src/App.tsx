@@ -3132,12 +3132,24 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                                 <p className="font-bold text-sm tracking-tight">{formatCurrency(expense.value)}</p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <p className="text-[9px] sm:text-[10px] text-white/20 font-black uppercase tracking-widest">
                                 {new Date(expense.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                               </p>
                               <span className="w-0.5 h-0.5 rounded-full bg-white/5" />
                               <p className="text-[9px] sm:text-[10px] text-white/20 font-black uppercase tracking-widest">{expense.category}</p>
+                              {(() => {
+                                const owner = users.find(u => u.id === expense.userId);
+                                if (!owner) return null;
+                                return (
+                                  <>
+                                    <span className="w-0.5 h-0.5 rounded-full bg-white/5" />
+                                    <p className="text-[9px] sm:text-[10px] text-white/20 font-black uppercase tracking-widest truncate">
+                                      por {owner.name}
+                                    </p>
+                                  </>
+                                );
+                              })()}
                             </div>
                             {expense.note && (
                               <p className="text-[11px] sm:text-[12px] text-white/70 mt-2 italic leading-relaxed break-words whitespace-pre-wrap [word-break:break-word]">"{expense.note}"</p>
