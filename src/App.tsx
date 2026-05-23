@@ -204,6 +204,8 @@ const NotificationSettingsModal = ({
   onTimeChange
 }: NotificationSettingsModalProps) => {
   const [permissionState, setPermissionState] = useState<NotificationPermission>("default");
+  const [activeDropdown, setActiveDropdown] = useState<'hour' | 'minute' | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   
   const isSupported = typeof window !== 'undefined' && 'Notification' in window;
 
@@ -213,6 +215,21 @@ const NotificationSettingsModal = ({
     }
   }, [isOpen, isSupported]);
 
+  // Close dropdown on click outside helper
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setActiveDropdown(null);
+      }
+    }
+    if (activeDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [activeDropdown]);
+
   if (!isOpen) return null;
 
   const handleRequestPermission = async () => {
@@ -221,7 +238,6 @@ const NotificationSettingsModal = ({
       const permission = await Notification.requestPermission();
       setPermissionState(permission);
       if (permission === 'granted') {
-        onToggle(true);
         new Notification("Controle de Gastos", {
           body: "Lembretes diários ativados com sucesso! 🔔",
           icon: "/icon.svg"
@@ -233,14 +249,11 @@ const NotificationSettingsModal = ({
   };
 
   const handleToggleChange = (newVal: boolean) => {
+    onToggle(newVal);
     if (newVal) {
       if (isSupported && Notification.permission !== 'granted') {
         handleRequestPermission();
-      } else {
-        onToggle(true);
       }
-    } else {
-      onToggle(false);
     }
   };
 
@@ -349,34 +362,96 @@ const NotificationSettingsModal = ({
                 >
                   <div className="space-y-2">
                     <p className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1 text-left">Horário de Aviso</p>
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 bg-white/5 border border-white/5 rounded-2xl p-3 flex flex-col items-center">
-                        <label className="text-[9px] font-bold text-white/30 uppercase tracking-widest mb-1.5">Hora</label>
-                        <select 
-                          value={currentHour}
-                          onChange={(e) => handleHourSelect(e.target.value)}
-                          className="bg-transparent text-lg font-black text-white w-full text-center outline-none cursor-pointer"
+                    <div ref={dropdownRef} className="flex items-center gap-3 relative">
+                      
+                      {/* Hour selector */}
+                      <div className="flex-1 relative">
+                        <button
+                          type="button"
+                          onClick={() => setActiveDropdown(activeDropdown === 'hour' ? null : 'hour')}
+                          className={cn(
+                            "w-full bg-white/5 border rounded-2xl p-3 flex flex-col items-center hover:bg-white/10 transition-all text-left",
+                            activeDropdown === 'hour' ? "border-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.15)] bg-white/10" : "border-white/5"
+                          )}
                         >
-                          {hoursArray.map(h => (
-                            <option key={h} value={h} className="bg-[#12141c] text-white">{h}</option>
-                          ))}
-                        </select>
+                          <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest mb-1">Hora</span>
+                          <span className="text-lg font-black text-white">{currentHour}</span>
+                        </button>
+
+                        <AnimatePresence>
+                          {activeDropdown === 'hour' && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                              className="absolute top-full left-0 right-0 mt-2 max-h-48 overflow-y-auto bg-[#181b2c]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl z-[250] py-1 scrollbar-none"
+                            >
+                              {hoursArray.map(h => (
+                                <button
+                                  key={h}
+                                  type="button"
+                                  onClick={() => {
+                                    handleHourSelect(h);
+                                    setActiveDropdown(null);
+                                  }}
+                                  className={cn(
+                                    "w-full py-2.5 text-center text-sm font-bold transition-all hover:bg-white/5",
+                                    currentHour === h ? "text-blue-400 bg-blue-500/10 font-black" : "text-white/60"
+                                  )}
+                                >
+                                  {h}
+                                </button>
+                              ))}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
 
                       <span className="text-2xl font-black text-white/20 select-none">:</span>
 
-                      <div className="flex-1 bg-white/5 border border-white/5 rounded-2xl p-3 flex flex-col items-center">
-                        <label className="text-[9px] font-bold text-white/30 uppercase tracking-widest mb-1.5">Minuto</label>
-                        <select 
-                          value={currentMinute}
-                          onChange={(e) => handleMinuteSelect(e.target.value)}
-                          className="bg-transparent text-lg font-black text-white w-full text-center outline-none cursor-pointer"
+                      {/* Minute selector */}
+                      <div className="flex-1 relative">
+                        <button
+                          type="button"
+                          onClick={() => setActiveDropdown(activeDropdown === 'minute' ? null : 'minute')}
+                          className={cn(
+                            "w-full bg-white/5 border rounded-2xl p-3 flex flex-col items-center hover:bg-white/10 transition-all text-left",
+                            activeDropdown === 'minute' ? "border-blue-500/40 shadow-[0_0_15px_rgba(59,130,246,0.15)] bg-white/10" : "border-white/5"
+                          )}
                         >
-                          {minutesArray.map(m => (
-                            <option key={m} value={m} className="bg-[#12141c] text-white">{m}</option>
-                          ))}
-                        </select>
+                          <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest mb-1">Minuto</span>
+                          <span className="text-lg font-black text-white">{currentMinute}</span>
+                        </button>
+
+                        <AnimatePresence>
+                          {activeDropdown === 'minute' && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                              className="absolute top-full left-0 right-0 mt-2 max-h-48 overflow-y-auto bg-[#181b2c]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl z-[250] py-1 scrollbar-none"
+                            >
+                              {minutesArray.map(m => (
+                                <button
+                                  key={m}
+                                  type="button"
+                                  onClick={() => {
+                                    handleMinuteSelect(m);
+                                    setActiveDropdown(null);
+                                  }}
+                                  className={cn(
+                                    "w-full py-2.5 text-center text-sm font-bold transition-all hover:bg-white/5",
+                                    currentMinute === m ? "text-blue-400 bg-blue-500/10 font-black" : "text-white/60"
+                                  )}
+                                >
+                                  {m}
+                                </button>
+                              ))}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
+
                     </div>
                   </div>
 
@@ -1728,7 +1803,7 @@ const ExpenseDetailModal = ({ isOpen, onClose, expense, onEdit, onDelete, catego
               {expense.note && (
                 <div className="p-4 bg-white/[0.03] border border-white/5 hover:bg-white/[0.05] transition-colors rounded-2xl">
                   <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-white/30 mb-0.5">OBSERVAÇÕES</p>
-                  <p className="text-white/70 italic text-xs leading-relaxed">"{expense.note}"</p>
+                  <p className="text-white/70 italic text-xs leading-relaxed break-words whitespace-pre-wrap [word-break:break-word]">"{expense.note}"</p>
                 </div>
               )}
             </div>
@@ -1820,6 +1895,21 @@ const ExpenseDetailModal = ({ isOpen, onClose, expense, onEdit, onDelete, catego
 };
 
 // --- Dashboard Screen ---
+
+const ptBRMonths = [
+  { value: "0", label: "Janeiro" },
+  { value: "1", label: "Fevereiro" },
+  { value: "2", label: "Março" },
+  { value: "3", label: "Abril" },
+  { value: "4", label: "Maio" },
+  { value: "5", label: "Junho" },
+  { value: "6", label: "Julho" },
+  { value: "7", label: "Agosto" },
+  { value: "8", label: "Setembro" },
+  { value: "9", label: "Outubro" },
+  { value: "10", label: "Novembro" },
+  { value: "11", label: "Dezembro" }
+];
 
 const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void }) => {
   const [expenses, setExpenses] = useState<Expense[]>(MOCK_EXPENSES);
@@ -1985,10 +2075,25 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("all");
+  const [selectedMonthFilter, setSelectedMonthFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState<'none' | 'asc' | 'desc'>('none');
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
   const [isCategoryFilterOpen, setIsCategoryFilterOpen] = useState(false);
+  const [isMonthFilterOpen, setIsMonthFilterOpen] = useState(false);
   const [isSortOrderOpen, setIsSortOrderOpen] = useState(false);
+
+  const availableMonths = useMemo(() => {
+    const registeredMonths = new Set<string>();
+    expenses.forEach(e => {
+      try {
+        const d = new Date(e.createdAt);
+        registeredMonths.add(d.getMonth().toString());
+      } catch (err) {
+        // Safe check for invalid dates
+      }
+    });
+    return ptBRMonths.filter(m => registeredMonths.has(m.value));
+  }, [expenses]);
 
   const filteredAndSortedExpenses = useMemo(() => {
     let result = [...expenses];
@@ -2004,6 +2109,14 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
       result = result.filter(e => e.category === selectedCategoryFilter);
     }
 
+    // 2.5 Month Filter
+    if (selectedMonthFilter !== "all") {
+      result = result.filter(e => {
+        const d = new Date(e.createdAt);
+        return d.getMonth().toString() === selectedMonthFilter;
+      });
+    }
+
     // 3. Sort by values
     if (sortOrder === 'asc') {
       result.sort((a, b) => a.value - b.value);
@@ -2012,7 +2125,7 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
     }
 
     return result;
-  }, [expenses, searchQuery, selectedCategoryFilter, sortOrder]);
+  }, [expenses, searchQuery, selectedCategoryFilter, selectedMonthFilter, sortOrder]);
 
   const stats = useMemo(() => {
     return categories.map(cat => {
@@ -2278,13 +2391,28 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
                     <Search className="w-4 h-4 text-white/20 mr-4" />
                     <input 
                       value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSearchQuery(val);
+                        if (val) {
+                          setIsFilterPanelOpen(false);
+                          if (selectedCategoryFilter !== "all") {
+                            setSelectedCategoryFilter("all");
+                          }
+                          if (selectedMonthFilter !== "all") {
+                            setSelectedMonthFilter("all");
+                          }
+                        }
+                      }}
                       placeholder="Procurar custo específico..." 
                       className="bg-transparent outline-none flex-1 text-sm font-medium placeholder:text-white/10" 
                     />
                     {searchQuery && (
                       <button 
-                        onClick={() => setSearchQuery("")}
+                        onClick={() => {
+                          setSearchQuery("");
+                          setIsFilterPanelOpen(false);
+                        }}
                         className="text-xs font-bold text-white/40 hover:text-white transition-colors uppercase tracking-widest pl-2"
                       >
                         Limpar
@@ -2301,44 +2429,168 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
                   )}
                 </div>
 
-                {isFilterPanelOpen && (
+                {/* Active Filters Bar */}
+                {!searchQuery && (selectedCategoryFilter !== "all" || sortOrder !== "none" || selectedMonthFilter !== "all") && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="flex flex-wrap items-center gap-2 pt-1 pb-2 px-1 text-xs"
+                  >
+                    <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest mr-1">Filtros ativos:</span>
+                    
+                    {selectedCategoryFilter !== "all" && (
+                      <div className="flex items-center gap-1.5 bg-white/5 border border-white/5 text-white/70 px-2.5 py-1 rounded-full text-[10px] font-bold">
+                        <span 
+                          className="w-1.5 h-1.5 rounded-full" 
+                          style={{ backgroundColor: categories.find(c => c.name === selectedCategoryFilter)?.color || '#3b82f6' }} 
+                        />
+                        <span>{selectedCategoryFilter}</span>
+                        <button type="button" onClick={() => setSelectedCategoryFilter("all")} className="hover:text-white transition-colors cursor-pointer">
+                          <X className="w-3 h-3 text-white/40 hover:text-white" />
+                        </button>
+                      </div>
+                    )}
+
+                    {selectedMonthFilter !== "all" && (
+                      <div className="flex items-center gap-1.5 bg-white/5 border border-white/5 text-white/70 px-2.5 py-1 rounded-full text-[10px] font-bold">
+                        <span>Mês: {ptBRMonths.find(m => m.value === selectedMonthFilter)?.label}</span>
+                        <button type="button" onClick={() => setSelectedMonthFilter("all")} className="hover:text-white transition-colors cursor-pointer">
+                          <X className="w-3 h-3 text-white/40 hover:text-white" />
+                        </button>
+                      </div>
+                    )}
+
+                    {sortOrder !== "none" && (
+                      <div className="flex items-center gap-1 bg-white/5 border border-white/5 text-white/70 px-2.5 py-1 rounded-full text-[10px] font-bold">
+                        <span>
+                          {sortOrder === "asc" ? "Menor para o Maior" : "Maior para o Menor"}
+                        </span>
+                        <button type="button" onClick={() => setSortOrder("none")} className="hover:text-white transition-colors cursor-pointer">
+                          <X className="w-3 h-3 text-white/40 hover:text-white" />
+                        </button>
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategoryFilter("all");
+                        setSelectedMonthFilter("all");
+                        setSortOrder("none");
+                      }}
+                      className="ml-auto text-[10px] font-black uppercase tracking-wider text-blue-400 hover:text-blue-300 transition-colors bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-full flex items-center gap-1 cursor-pointer"
+                    >
+                      Limpar Filtros
+                    </button>
+                  </motion.div>
+                )}
+
+                {!searchQuery && isFilterPanelOpen && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="p-5 bg-[#161929]/50 border border-white/5 rounded-[24px] backdrop-blur-xl"
                   >
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       {/* Category Filter */}
+                      {!searchQuery && (
+                        <div className="space-y-1 relative">
+                          <label className="text-[9px] font-black uppercase tracking-[0.15em] text-white/30 ml-1 block select-none">Filtrar por Categoria</label>
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsCategoryFilterOpen(!isCategoryFilterOpen);
+                                setIsMonthFilterOpen(false);
+                                setIsSortOrderOpen(false);
+                              }}
+                              className="w-full h-11 bg-white/[0.03] hover:bg-white/[0.05] border border-white/10 rounded-xl px-4 flex items-center justify-between text-xs font-bold text-white transition-all select-none"
+                            >
+                              <span className="flex items-center gap-2">
+                                {selectedCategoryFilter === "all" ? (
+                                  <>Todas as categorias</>
+                                ) : (
+                                  <>
+                                    <span 
+                                      className="w-1.5 h-1.5 rounded-full" 
+                                      style={{ backgroundColor: categories.find(c => c.name === selectedCategoryFilter)?.color || '#3b82f6' }} 
+                                    />
+                                    {selectedCategoryFilter}
+                                  </>
+                                )}
+                              </span>
+                              <ChevronDown className={`w-4 h-4 text-white/45 transition-transform duration-200 ${isCategoryFilterOpen ? "rotate-180 text-blue-400" : ""}`} />
+                            </button>
+
+                            {isCategoryFilterOpen && (
+                              <>
+                                <div className="fixed inset-0 z-10" onClick={() => setIsCategoryFilterOpen(false)} />
+                                <motion.div
+                                  initial={{ opacity: 0, y: 5, scale: 0.98 }}
+                                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                                  className="absolute left-0 right-0 mt-1.5 p-1.5 bg-[#1a1e33] border border-white/10 rounded-2xl shadow-2xl z-20 max-h-56 overflow-y-auto scrollbar-none flex flex-col gap-0.5"
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedCategoryFilter("all");
+                                      setIsCategoryFilterOpen(false);
+                                    }}
+                                    className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-bold text-left transition-all flex items-center gap-2 ${
+                                      selectedCategoryFilter === "all"
+                                        ? "bg-white/10 text-white"
+                                        : "text-white/60 hover:bg-white/5 hover:text-white"
+                                    }`}
+                                  >
+                                    Todas as categorias
+                                  </button>
+                                  {categories.map((cat) => (
+                                    <button
+                                      key={cat.name}
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedCategoryFilter(cat.name);
+                                        setIsCategoryFilterOpen(false);
+                                      }}
+                                      className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-bold text-left transition-all flex items-center gap-2 ${
+                                        selectedCategoryFilter === cat.name
+                                          ? "bg-white/10 text-white"
+                                          : "text-white/60 hover:bg-white/5 hover:text-white"
+                                      }`}
+                                    >
+                                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cat.color }} />
+                                      {cat.name}
+                                    </button>
+                                  ))}
+                                </motion.div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Month Filter */}
                       <div className="space-y-1 relative">
-                        <label className="text-[9px] font-black uppercase tracking-[0.15em] text-white/30 ml-1 block select-none">Filtrar por Categoria</label>
+                        <label className="text-[9px] font-black uppercase tracking-[0.15em] text-white/30 ml-1 block select-none">Filtrar por Mês</label>
                         <div className="relative">
                           <button
                             type="button"
                             onClick={() => {
-                              setIsCategoryFilterOpen(!isCategoryFilterOpen);
+                              setIsMonthFilterOpen(!isMonthFilterOpen);
+                              setIsCategoryFilterOpen(false);
                               setIsSortOrderOpen(false);
                             }}
                             className="w-full h-11 bg-white/[0.03] hover:bg-white/[0.05] border border-white/10 rounded-xl px-4 flex items-center justify-between text-xs font-bold text-white transition-all select-none"
                           >
-                            <span className="flex items-center gap-2">
-                              {selectedCategoryFilter === "all" ? (
-                                <>Todas as categorias</>
-                              ) : (
-                                <>
-                                  <span 
-                                    className="w-1.5 h-1.5 rounded-full" 
-                                    style={{ backgroundColor: categories.find(c => c.name === selectedCategoryFilter)?.color || '#3b82f6' }} 
-                                  />
-                                  {selectedCategoryFilter}
-                                </>
-                              )}
+                            <span>
+                              {selectedMonthFilter === "all" ? "Todos os meses" : ptBRMonths.find(m => m.value === selectedMonthFilter)?.label}
                             </span>
-                            <ChevronDown className={`w-4 h-4 text-white/45 transition-transform duration-200 ${isCategoryFilterOpen ? "rotate-180 text-blue-400" : ""}`} />
+                            <ChevronDown className={`w-4 h-4 text-white/45 transition-transform duration-200 ${isMonthFilterOpen ? "rotate-180 text-blue-400" : ""}`} />
                           </button>
 
-                          {isCategoryFilterOpen && (
+                          {isMonthFilterOpen && (
                             <>
-                              <div className="fixed inset-0 z-10" onClick={() => setIsCategoryFilterOpen(false)} />
+                              <div className="fixed inset-0 z-10" onClick={() => setIsMonthFilterOpen(false)} />
                               <motion.div
                                 initial={{ opacity: 0, y: 5, scale: 0.98 }}
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -2347,33 +2599,32 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    setSelectedCategoryFilter("all");
-                                    setIsCategoryFilterOpen(false);
+                                    setSelectedMonthFilter("all");
+                                    setIsMonthFilterOpen(false);
                                   }}
-                                  className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-bold text-left transition-all flex items-center gap-2 ${
-                                    selectedCategoryFilter === "all"
+                                  className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-bold text-left transition-all ${
+                                    selectedMonthFilter === "all"
                                       ? "bg-white/10 text-white"
                                       : "text-white/60 hover:bg-white/5 hover:text-white"
                                   }`}
                                 >
-                                  Todas as categorias
+                                  Todos os meses
                                 </button>
-                                {categories.map((cat) => (
+                                {availableMonths.map((m) => (
                                   <button
-                                    key={cat.name}
+                                    key={m.value}
                                     type="button"
                                     onClick={() => {
-                                      setSelectedCategoryFilter(cat.name);
-                                      setIsCategoryFilterOpen(false);
+                                      setSelectedMonthFilter(m.value);
+                                      setIsMonthFilterOpen(false);
                                     }}
-                                    className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-bold text-left transition-all flex items-center gap-2 ${
-                                      selectedCategoryFilter === cat.name
+                                    className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-bold text-left transition-all ${
+                                      selectedMonthFilter === m.value
                                         ? "bg-white/10 text-white"
                                         : "text-white/60 hover:bg-white/5 hover:text-white"
                                     }`}
                                   >
-                                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cat.color }} />
-                                    {cat.name}
+                                    {m.label}
                                   </button>
                                 ))}
                               </motion.div>
@@ -2391,6 +2642,7 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
                             onClick={() => {
                               setIsSortOrderOpen(!isSortOrderOpen);
                               setIsCategoryFilterOpen(false);
+                              setIsMonthFilterOpen(false);
                             }}
                             className="w-full h-11 bg-white/[0.03] hover:bg-white/[0.05] border border-white/10 rounded-xl px-4 flex items-center justify-between text-xs font-bold text-white transition-all select-none"
                           >
@@ -2475,6 +2727,20 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
                       <p className="text-xs font-bold text-white/50">Nenhum lançamento encontrado</p>
                       <p className="text-[10px] text-white/20 px-4 leading-relaxed font-medium">Tente ajustar seus termos de pesquisa ou os filtros ativos (categoria e ordenação).</p>
                     </div>
+                    {(selectedCategoryFilter !== "all" || sortOrder !== "none" || searchQuery !== "" || selectedMonthFilter !== "all") && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearchQuery("");
+                          setSelectedCategoryFilter("all");
+                          setSelectedMonthFilter("all");
+                          setSortOrder("none");
+                        }}
+                        className="mx-auto text-xs font-bold bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 px-5 h-10 rounded-xl transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
+                      >
+                        Limpar Filtros
+                      </button>
+                    )}
                   </motion.div>
                 ) : (
                   filteredAndSortedExpenses.map((expense, idx) => {
@@ -2510,7 +2776,7 @@ const DashboardScreen = ({ user, onLogout }: { user: User, onLogout: () => void 
                               <p className="text-[9px] sm:text-[10px] text-white/20 font-black uppercase tracking-widest">{expense.category}</p>
                             </div>
                             {expense.note && (
-                              <p className="text-[11px] sm:text-[12px] text-white/70 mt-2 italic leading-relaxed break-words">"{expense.note}"</p>
+                              <p className="text-[11px] sm:text-[12px] text-white/70 mt-2 italic leading-relaxed break-words whitespace-pre-wrap [word-break:break-word]">"{expense.note}"</p>
                             )}
                           </div>
                         </div>
