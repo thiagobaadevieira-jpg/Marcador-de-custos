@@ -1,20 +1,9 @@
-const CACHE_NAME = 'controle-gastos-v1';
-const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon.svg'
-];
+const CACHE_NAME = 'controle-gastos-v2';
+// Apenas assets estáticos com hash (JS/CSS via Vite) são cacheados
+// HTML NUNCA é cacheado pelo SW para garantir sempre o código mais recente
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
-    }).catch(err => {
-      console.log('SW Cache error during install:', err);
-    })
-  );
-  self.skipWaiting();
+  self.skipWaiting(); // Ativa imediatamente sem esperar fechar as abas antigas
 });
 
 self.addEventListener('activate', (event) => {
@@ -23,52 +12,45 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
-            return caches.delete(key);
+            return caches.delete(key); // Apaga todos os caches antigos (v1, etc.)
           }
         })
       );
     })
   );
-  self.clients.claim();
+  self.clients.claim(); // Assume controle imediato de todas as abas
 });
 
 self.addEventListener('fetch', (event) => {
-  // Let the browser handle non-GET or external API requests directly
-  if (event.request.method !== 'GET' || !event.request.url.startsWith(self.location.origin)) {
+  const { request } = event;
+
+  // Ignora requests não-GET e requests para domínios externos (ex: Supabase API)
+  if (request.method !== 'GET' || !request.url.startsWith(self.location.origin)) {
     return;
   }
 
+  // NUNCA cacheia navegação HTML — sempre busca da rede para garantir versão atual
+  if (request.mode === 'navigate' || request.url.endsWith('.html')) {
+    event.respondWith(
+      fetch(request).catch(() => caches.match('/'))
+    );
+    return;
+  }
+
+  // Para assets com hash no nome (JS/CSS gerados pelo Vite): cache-first
+  // Esses arquivos mudam de nome a cada build, então são seguros para cachear
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Background update for stale-while-revalidate
-        fetch(event.request).then((networkResponse) => {
-          if (networkResponse.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, networkResponse);
-            });
-          }
-        }).catch(() => { /* bypass offline sync errors silent */ });
-        
-        return cachedResponse;
-      }
+    caches.match(request).then((cached) => {
+      if (cached) return cached;
 
-      return fetch(event.request).then((networkResponse) => {
-        if (!networkResponse || networkResponse.status !== 200) {
-          return networkResponse;
+      return fetch(request).then((response) => {
+        if (!response || response.status !== 200 || response.type === 'opaque') {
+          return response;
         }
-
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
-
-        return networkResponse;
-      }).catch(() => {
-        if (event.request.mode === 'navigate') {
-          return caches.match('/');
-        }
-      });
+        const toCache = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(request, toCache));
+        return response;
+      }).catch(() => {});
     })
   );
 });
