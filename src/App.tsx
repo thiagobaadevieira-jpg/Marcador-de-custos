@@ -696,23 +696,21 @@ const ExportModal = ({ isOpen, onClose, expenses, categories }: ExportModalProps
     }
     
     /* Helper classes for styling table cells dynamically */
-    .table-expense-name {
-      font-weight: 700;
-      color: #ffffff;
-    }
     .table-user-name {
-      font-size: 13px;
+      font-size: 11px;
       color: rgba(255, 255, 255, 0.7);
     }
     .table-date {
       color: rgba(255, 255, 255, 0.5);
-      font-size: 13px;
+      font-size: 11px;
+      white-space: nowrap;
     }
     .table-value {
       text-align: right;
       font-weight: 800;
-      font-size: 14px;
+      font-size: 12px;
       color: #ffffff;
+      white-space: nowrap;
     }
     
     /* Ensure background colors and gradients are preserved when exporting and printing */
@@ -807,8 +805,8 @@ const ExportModal = ({ isOpen, onClose, expenses, categories }: ExportModalProps
       font-family: 'Inter', sans-serif;
       background-color: var(--bg);
       color: var(--text);
-      padding: 40px 20px;
-      line-height: 1.5;
+      padding: 24px 16px;
+      line-height: 1.4;
     }
 
     .container {
@@ -820,9 +818,9 @@ const ExportModal = ({ isOpen, onClose, expenses, categories }: ExportModalProps
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-bottom: 24px;
+      padding-bottom: 14px;
       border-bottom: 1px solid var(--border);
-      margin-bottom: 32px;
+      margin-bottom: 20px;
     }
 
     .logo-container {
@@ -924,57 +922,57 @@ const ExportModal = ({ isOpen, onClose, expenses, categories }: ExportModalProps
     .grid-totals {
       display: grid;
       grid-template-cols: 1fr 1fr;
-      gap: 20px;
-      margin-bottom: 32px;
+      gap: 12px;
+      margin-bottom: 18px;
     }
 
     .card {
       background-color: var(--card-bg);
       border: 1px solid var(--border);
-      border-radius: 28px;
-      padding: 24px;
+      border-radius: 16px;
+      padding: 14px 16px;
       backdrop-filter: blur(20px);
     }
 
     .card-title {
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 900;
       text-transform: uppercase;
-      letter-spacing: 2px;
+      letter-spacing: 1.5px;
       color: var(--text-soft);
-      margin-bottom: 12px;
+      margin-bottom: 6px;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
     }
 
     .card-title .circle {
-      width: 6px;
-      height: 6px;
+      width: 5px;
+      height: 5px;
       border-radius: 50%;
     }
 
     .card-val {
-      font-size: 32px;
+      font-size: 22px;
       font-weight: 300;
-      letter-spacing: -1px;
+      letter-spacing: -0.5px;
     }
 
     .card-val span {
-      font-size: 18px;
+      font-size: 13px;
       opacity: 0.3;
     }
 
     .chart-card {
-      margin-bottom: 32px;
+      margin-bottom: 18px;
     }
 
     .chart-header {
-      margin-bottom: 24px;
+      margin-bottom: 12px;
     }
 
     .stat-row {
-      margin-bottom: 20px;
+      margin-bottom: 10px;
     }
 
     .stat-row:last-child {
@@ -1048,47 +1046,69 @@ const ExportModal = ({ isOpen, onClose, expenses, categories }: ExportModalProps
     table {
       width: 100%;
       border-collapse: collapse;
+      table-layout: fixed;
     }
+
+    /* Larguras fixas: economiza papel e força quebra de linha */
+    th:nth-child(1), td:nth-child(1) { width: 46%; }
+    th:nth-child(2), td:nth-child(2) { width: 22%; }
+    th:nth-child(3), td:nth-child(3) { width: 14%; }
+    th:nth-child(4), td:nth-child(4) { width: 18%; }
 
     th {
       text-align: left;
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 900;
       text-transform: uppercase;
-      letter-spacing: 2px;
+      letter-spacing: 1.5px;
       color: var(--text-soft);
-      padding: 16px 24px;
+      padding: 10px 12px;
       border-bottom: 1px solid var(--border);
     }
 
     td {
-      padding: 18px 24px;
+      padding: 8px 12px;
       border-bottom: 1px solid var(--border);
-      font-size: 14px;
-      vertical-align: middle;
+      font-size: 12px;
+      vertical-align: top;
+      word-break: break-word;
+      overflow-wrap: anywhere;
     }
 
     tr:last-child td {
       border-bottom: none;
     }
 
+    .table-expense-name {
+      font-weight: 700;
+      color: #ffffff;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      line-height: 1.35;
+    }
+
     .table-note {
-      font-size: 11px;
+      font-size: 10px;
       color: var(--text-soft);
       font-style: italic;
-      margin-top: 4px;
+      margin-top: 3px;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      line-height: 1.4;
     }
 
     .table-tag {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
-      border-radius: 12px;
-      font-size: 11px;
+      gap: 5px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      font-size: 9px;
       font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.3px;
+      max-width: 100%;
+      word-break: break-word;
     }
 
     .tag-dot {
