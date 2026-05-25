@@ -1826,23 +1826,14 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
   if (!isOpen) return null;
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100]"
-          />
-          <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="fixed bottom-0 left-0 right-0 glass rounded-t-[48px] p-10 z-[101] max-h-[92vh] overflow-y-auto border-t border-white/10"
-          >
+    <>
+      <div
+        onClick={onClose}
+        className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100]"
+      />
+      <div
+        className="fixed bottom-0 left-0 right-0 glass rounded-t-[48px] p-10 z-[101] max-h-[92vh] overflow-y-auto border-t border-white/10"
+      >
             <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-10" />
             
             <div className="flex justify-between items-center mb-10">
@@ -2011,10 +2002,8 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
                 {expense ? "Salvar Alterações" : "Confirmar Lançamento"}
               </button>
             </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+      </div>
+    </>
   );
 };
 
