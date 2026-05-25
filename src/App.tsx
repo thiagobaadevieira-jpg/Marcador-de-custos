@@ -2233,7 +2233,7 @@ const ExpenseRow = memo(({ expense, categoryColor, ownerName, idx, pageSize, onS
           )}
         </div>
         {expense.note && (
-          <p className="text-[10px] text-white/50 mt-1 leading-relaxed break-words whitespace-pre-wrap [word-break:break-word]">{expense.note}</p>
+          <p className="text-xs text-white/50 mt-1 leading-relaxed break-words whitespace-pre-wrap [word-break:break-word]">{expense.note}</p>
         )}
       </div>
     </div>
