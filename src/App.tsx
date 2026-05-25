@@ -2388,8 +2388,12 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
   const [view, setView] = useState<'overview' | 'list'>('overview');
 
-  // Recarrega dados ao entrar na aba Lançamentos para pegar novos lançamentos de outros dispositivos
-  useEffect(() => { if (view === 'list') loadData(); }, [view]);
+  // Atualiza lançamentos silenciosamente ao entrar na aba (sem spinner)
+  useEffect(() => {
+    if (view === 'list') {
+      db.getExpenses().then(setExpenses).catch(() => {});
+    }
+  }, [view]);
 
   const handleEdit = (expense: Expense) => {
     setExpenseToEdit(expense);
