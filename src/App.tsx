@@ -2388,6 +2388,20 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
   const [view, setView] = useState<'overview' | 'list'>('overview');
 
+  // Esconde header ao rolar para baixo, mostra ao rolar para cima
+  const [headerVisible, setHeaderVisible] = useState(true);
+  useEffect(() => {
+    let lastY = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (y > lastY && y > 60) setHeaderVisible(false);
+      else setHeaderVisible(true);
+      lastY = y;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   // Atualiza lançamentos silenciosamente ao entrar na aba (sem spinner)
   useEffect(() => {
     if (view === 'list') {
@@ -2665,7 +2679,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
   return (
     <div className="pb-32 pt-0 min-h-screen">
       {/* Header */}
-      <header className="fixed top-0 inset-x-0 glass border-b border-white/5 px-6 py-5 flex items-center justify-between z-[80] backdrop-blur-lg">
+      <header className={`fixed top-0 inset-x-0 glass border-b border-white/5 px-6 py-5 flex items-center justify-between z-[80] backdrop-blur-lg transition-transform duration-300 ${headerVisible ? 'translate-y-0' : '-translate-y-full'}`}>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-black border border-white/10 rounded-full flex items-center justify-center shadow-lg select-none">
             <DollarSign className="w-5 h-5 text-white stroke-[2.5]" />
@@ -2748,7 +2762,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
 
       <div className="max-w-2xl mx-auto px-6 pt-28">
         {/* View Switcher Refined */}
-        <div className="flex p-1.5 glass rounded-2xl mb-10">
+        <div className={`flex p-1.5 glass rounded-2xl mb-10 sticky z-[70] backdrop-blur-lg transition-all duration-300 ${headerVisible ? 'top-[72px]' : 'top-2'}`}>
           <button 
             onClick={() => setView('overview')}
             className={cn(
