@@ -2748,7 +2748,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
 
       <div className="max-w-2xl mx-auto px-6 pt-28">
         {/* View Switcher Refined */}
-        <div className="flex p-1.5 glass rounded-2xl mb-10 sticky top-[72px] z-[70] backdrop-blur-lg">
+        <div className="flex p-1.5 glass rounded-2xl mb-10">
           <button 
             onClick={() => setView('overview')}
             className={cn(
