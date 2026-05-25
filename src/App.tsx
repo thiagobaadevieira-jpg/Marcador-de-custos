@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { DollarSign, Bell, Plus, LayoutDashboard, List, LogOut, Search, Filter, Camera, X, ChevronDown, Settings, Trash2, Menu, Edit2, AlertCircle, Download, Paperclip, User as UserIcon, Check } from "lucide-react";
+import { SplashScreen } from "@/src/components/SplashScreen";
 import { cn, formatCurrency } from "@/src/lib/utils";
 import { User, Expense } from "@/src/types";
 import { supabase } from "@/src/lib/supabase";
@@ -3349,6 +3350,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [showSplash, setShowSplash] = useState(true);
 
   async function loadUserProfile(userId: string, sessionEmail: string = ''): Promise<User> {
     const profile = await db.getUserProfile(userId);
@@ -3405,27 +3407,25 @@ export default function App() {
     return () => { clearTimeout(timeout); subscription.unsubscribe(); };
   }, []);
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
-      </div>
-    );
-  }
-
   return (
     <div className="relative min-h-screen">
-      <AnimatePresence mode="wait">
-        {!currentUser ? (
-          <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <LoginScreen />
-          </motion.div>
-        ) : (
-          <motion.div key="app" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <DashboardScreen user={currentUser} onLogout={() => supabase.auth.signOut()} onProfileUpdate={setCurrentUser} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Splash screen — shown on first load, fades out automatically */}
+      {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
+
+      {/* Main app — renders beneath the splash while it plays */}
+      {!authLoading && (
+        <AnimatePresence mode="wait">
+          {!currentUser ? (
+            <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <LoginScreen />
+            </motion.div>
+          ) : (
+            <motion.div key="app" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <DashboardScreen user={currentUser} onLogout={() => supabase.auth.signOut()} onProfileUpdate={setCurrentUser} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
     </div>
   );
 }
