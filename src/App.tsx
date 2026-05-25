@@ -250,7 +250,7 @@ const NotificationSettingsModal = ({
         await reg.showNotification(notifTitle, {
           body,
           icon: '/icon-192.png',
-          badge: '/icon-192.png',
+          badge: '/badge.svg',
         });
         return;
       } catch (e) {
@@ -2371,7 +2371,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                   registration.showNotification(notifTitle, {
                     body: notifBody,
                     icon: "/icon-192.png",
-                    badge: "/icon-192.png",
+                    badge: "/badge.svg",
                     vibrate: [200, 100, 200],
                     tag: "remind-gastos"
                   } as any);
