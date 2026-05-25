@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
-import { motion, AnimatePresence, useScroll, useTransform } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { DollarSign, Bell, Plus, LayoutDashboard, List, LogOut, Search, Filter, Camera, X, ChevronDown, Settings, Trash2, Menu, Edit2, AlertCircle, Download, Paperclip, User as UserIcon, Check } from "lucide-react";
 import { cn, formatCurrency } from "@/src/lib/utils";
 import { User, Expense } from "@/src/types";
@@ -28,7 +28,7 @@ const GlassCard = ({ children, className, delay = 0 }: GlassCardProps) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.5, delay }}
+    transition={{ duration: 0.2, delay }}
     className={cn("glass-card", className)}
   >
     {children}
@@ -92,7 +92,7 @@ const CategorySettingsModal = ({
             initial={{ scale: 0.95, opacity: 0, y: 15 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 15 }}
-            className="fixed inset-4 m-auto max-w-sm h-fit max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none bg-[#161929]/90 backdrop-blur-2xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)]"
+            className="fixed inset-4 m-auto max-w-sm h-fit max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none bg-[#161929]/90 backdrop-blur-xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)]"
           >
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-2xl font-black tracking-tight">Categorias</h2>
@@ -337,7 +337,7 @@ const NotificationSettingsModal = ({
             initial={{ scale: 0.95, opacity: 0, y: 15 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 15 }}
-            className="fixed inset-4 m-auto max-w-sm h-fit max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none bg-[#161929]/90 backdrop-blur-2xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)]"
+            className="fixed inset-4 m-auto max-w-sm h-fit max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none bg-[#161929]/90 backdrop-blur-xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)]"
           >
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-black tracking-tight text-white">Lembretes</h2>
@@ -438,7 +438,7 @@ const NotificationSettingsModal = ({
                               initial={{ opacity: 0, y: 10, scale: 0.95 }}
                               animate={{ opacity: 1, y: 0, scale: 1 }}
                               exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                              className="absolute top-full left-0 right-0 mt-2 max-h-48 overflow-y-auto bg-[#181b2c]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl z-[250] py-1 scrollbar-none"
+                              className="absolute top-full left-0 right-0 mt-2 max-h-48 overflow-y-auto bg-[#181b2c]/95 backdrop-blur-lg border border-white/10 rounded-2xl shadow-2xl z-[250] py-1 scrollbar-none"
                             >
                               {hoursArray.map(h => (
                                 <button
@@ -483,7 +483,7 @@ const NotificationSettingsModal = ({
                               initial={{ opacity: 0, y: 10, scale: 0.95 }}
                               animate={{ opacity: 1, y: 0, scale: 1 }}
                               exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                              className="absolute top-full left-0 right-0 mt-2 max-h-48 overflow-y-auto bg-[#181b2c]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl z-[250] py-1 scrollbar-none"
+                              className="absolute top-full left-0 right-0 mt-2 max-h-48 overflow-y-auto bg-[#181b2c]/95 backdrop-blur-lg border border-white/10 rounded-2xl shadow-2xl z-[250] py-1 scrollbar-none"
                             >
                               {minutesArray.map(m => (
                                 <button
@@ -1310,7 +1310,7 @@ const ExportModal = ({ isOpen, onClose, expenses, categories, users }: ExportMod
             initial={{ scale: 0.95, opacity: 0, y: 15 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 15 }}
-            className="fixed inset-4 m-auto max-w-md h-fit max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none bg-[#161929]/90 backdrop-blur-2xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)]"
+            className="fixed inset-4 m-auto max-w-md h-fit max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none bg-[#161929]/90 backdrop-blur-xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)]"
           >
             <div className="flex justify-between items-center mb-8">
               <div className="flex items-center gap-3">
@@ -1391,7 +1391,7 @@ const ExportModal = ({ isOpen, onClose, expenses, categories, users }: ExportMod
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
                             transition={{ duration: 0.15 }}
-                            className="absolute left-0 right-0 mt-2 bg-[#12141c]/95 backdrop-blur-2xl border border-white/10 rounded-2xl p-2 shadow-2xl z-[215] max-h-48 overflow-y-auto scrollbar-none select-none"
+                            className="absolute left-0 right-0 mt-2 bg-[#12141c]/95 backdrop-blur-lg border border-white/10 rounded-2xl p-2 shadow-2xl z-[215] max-h-48 overflow-y-auto scrollbar-none select-none"
                           >
                             {availableMonths.map(month => (
                               <button
@@ -1639,7 +1639,7 @@ const ProfileModal = ({ isOpen, onClose, user, email, onSaved }: ProfileModalPro
             initial={{ scale: 0.95, opacity: 0, y: 15 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 15 }}
-            className="fixed inset-4 m-auto max-w-sm h-fit max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none bg-[#161929]/90 backdrop-blur-2xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)]"
+            className="fixed inset-4 m-auto max-w-sm h-fit max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none bg-[#161929]/90 backdrop-blur-xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)]"
           >
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-2xl font-black tracking-tight">Meu Perfil</h2>
@@ -2124,7 +2124,7 @@ const ExpenseDetailModal = ({ isOpen, onClose, expense, onEdit, onDelete, catego
             initial={{ scale: 0.95, opacity: 0, y: 15 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 15 }}
-            className="fixed inset-4 m-auto max-w-sm h-fit bg-[#161929]/95 backdrop-blur-2xl rounded-[40px] p-8 sm:p-10 z-[201] flex flex-col items-center text-center border border-white/10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)]"
+            className="fixed inset-4 m-auto max-w-sm h-fit bg-[#161929]/95 backdrop-blur-lg rounded-[40px] p-8 sm:p-10 z-[201] flex flex-col items-center text-center border border-white/10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)]"
           >
             <button 
               onClick={onClose} 
@@ -2587,9 +2587,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
       .reduce((sum, e) => sum + e.value, 0);
   }, [expenses]);
 
-  const { scrollY } = useScroll();
-  const headerY = useTransform(scrollY, [0, 80], [0, -120]);
-  const tabsTop = useTransform(scrollY, [0, 80], [88, 20]);
+  // useScroll/useTransform removidos — parallax JS causava jank no mobile
 
   // Reset paginação quando filtros/busca mudam
   useEffect(() => {
@@ -2661,10 +2659,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
   return (
     <div className="pb-32 pt-0 min-h-screen">
       {/* Header */}
-      <motion.header 
-        style={{ y: headerY }}
-        className="fixed top-0 inset-x-0 glass border-b border-white/5 px-6 py-5 flex items-center justify-between z-[80] backdrop-blur-xl"
-      >
+      <header className="fixed top-0 inset-x-0 glass border-b border-white/5 px-6 py-5 flex items-center justify-between z-[80] backdrop-blur-lg">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-black border border-white/10 rounded-full flex items-center justify-center shadow-lg select-none">
             <DollarSign className="w-5 h-5 text-white stroke-[2.5]" />
@@ -2686,10 +2681,11 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
           <AnimatePresence>
             {isMenuOpen && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                className="absolute top-full right-0 mt-3 w-56 bg-[#161929]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl p-2 z-[90] overflow-hidden"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 6 }}
+                transition={{ duration: 0.15 }}
+                className="absolute top-full right-0 mt-3 w-56 bg-[#161929]/95 backdrop-blur-lg border border-white/10 rounded-2xl shadow-2xl p-2 z-[90] overflow-hidden"
               >
                   <button
                     onClick={() => {
@@ -2750,14 +2746,11 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
             )}
           </AnimatePresence>
         </div>
-      </motion.header>
+      </header>
 
       <div className="max-w-2xl mx-auto px-6 pt-28">
         {/* View Switcher Refined */}
-        <motion.div 
-          style={{ top: tabsTop }}
-          className="flex p-1.5 glass rounded-2xl mb-10 sticky z-[70] backdrop-blur-2xl"
-        >
+        <div className="flex p-1.5 glass rounded-2xl mb-10 sticky top-[72px] z-[70] backdrop-blur-lg">
           <button 
             onClick={() => setView('overview')}
             className={cn(
@@ -2778,15 +2771,16 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
             <List className="w-4 h-4" />
             <span className="text-sm font-bold">Lançamentos</span>
           </button>
-        </motion.div>
+        </div>
 
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="sync">
           {view === 'overview' ? (
             <motion.div
               key="overview"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
               className="space-y-6"
             >
               {/* Hero Stats Grid */}
@@ -2809,7 +2803,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                     <motion.div 
                       initial={{ width: 0 }} 
                       animate={{ width: '100%' }} 
-                      transition={{ duration: 2, ease: "easeOut" }}
+                      transition={{ duration: 0.6, ease: "easeOut" }}
                       className="h-full btn-gradient shadow-[0_0_15px_rgba(59,130,246,0.3)]" 
                     />
                   </div>
@@ -2833,7 +2827,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                     <motion.div 
                       initial={{ width: 0 }} 
                       animate={{ width: '100%' }} 
-                      transition={{ duration: 2, ease: "easeOut" }}
+                      transition={{ duration: 0.6, ease: "easeOut" }}
                       className="h-full bg-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.3)]" 
                     />
                   </div>
@@ -2855,11 +2849,11 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                     if (s.total === 0) return null;
                     
                     return (
-                      <motion.div 
+                      <motion.div
                         key={s.name}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.1 * idx }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.05 * idx, duration: 0.2 }}
                         className="space-y-3"
                       >
                         <div className="flex justify-between items-end">
@@ -2876,7 +2870,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                           <motion.div 
                             initial={{ width: 0 }} 
                             animate={{ width: `${percentage}%` }} 
-                            transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1], delay: 0.2 + (0.1 * idx) }}
+                            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: 0.05 * idx }}
                             className="h-full absolute top-0 left-0" 
                             style={{ backgroundColor: s.color }} 
                           />
@@ -2890,9 +2884,10 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
           ) : (
             <motion.div
               key="list"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
               className="space-y-6"
             >
               {/* Search/Filter Container */}
