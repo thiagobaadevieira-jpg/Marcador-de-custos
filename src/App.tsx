@@ -242,16 +242,39 @@ const NotificationSettingsModal = ({
 
   if (!isOpen) return null;
 
+  // Envia notificação via Service Worker (funciona no mobile) com fallback para desktop
+  const sendNotificationViaSW = async (notifTitle: string, body: string) => {
+    if ('serviceWorker' in navigator) {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        await reg.showNotification(notifTitle, {
+          body,
+          icon: '/icon-192.png',
+          badge: '/icon-192.png',
+        });
+        return;
+      } catch (e) {
+        console.warn('SW showNotification falhou, tentando fallback:', e);
+      }
+    }
+    // Fallback apenas para desktop onde new Notification() funciona
+    try {
+      new Notification(notifTitle, { body, icon: '/icon-192.png' });
+    } catch (e) {
+      console.error('Não foi possível exibir notificação:', e);
+    }
+  };
+
   const handleRequestPermission = async () => {
     if (!isSupported) return;
     try {
       const permission = await Notification.requestPermission();
       setPermissionState(permission);
       if (permission === 'granted') {
-        new Notification(title || "Controle de Gastos", {
-          body: "Lembretes diários ativados com sucesso! 🔔",
-          icon: "/icon-192.png"
-        });
+        await sendNotificationViaSW(
+          title || "Controle de Gastos",
+          "Lembretes diários ativados com sucesso! 🔔"
+        );
       }
     } catch (err) {
       console.error("Error requesting notification permission:", err);
@@ -267,7 +290,7 @@ const NotificationSettingsModal = ({
     }
   };
 
-  const handleSendTestNotification = () => {
+  const handleSendTestNotification = async () => {
     if (!isSupported) {
       alert("As notificações nativas não são suportadas neste navegador.");
       return;
@@ -275,20 +298,13 @@ const NotificationSettingsModal = ({
     const previewTitle = title.trim() || "Controle de Gastos";
     const previewBody = message.trim() || "Seu lembrete de teste está funcionando! 🤝";
     if (Notification.permission !== 'granted') {
-      Notification.requestPermission().then(perm => {
-        setPermissionState(perm);
-        if (perm === 'granted') {
-          new Notification(previewTitle, {
-            body: previewBody,
-            icon: "/icon-192.png"
-          });
-        }
-      });
+      const perm = await Notification.requestPermission();
+      setPermissionState(perm);
+      if (perm === 'granted') {
+        await sendNotificationViaSW(previewTitle, previewBody);
+      }
     } else {
-      new Notification(previewTitle, {
-        body: previewBody,
-        icon: "/icon-192.png"
-      });
+      await sendNotificationViaSW(previewTitle, previewBody);
     }
   };
 
