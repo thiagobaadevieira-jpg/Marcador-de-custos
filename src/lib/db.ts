@@ -154,6 +154,7 @@ export async function getUserProfile(userId: string): Promise<User | null> {
     color: data.color as string,
     initials: data.initials as string,
     photoUrl: data.photo_url ? (data.photo_url as string) : undefined,
+    allowedCategories: (data.allowed_categories as string[] | null) ?? null,
   };
 }
 

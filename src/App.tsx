@@ -2490,8 +2490,19 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
       .sort((a, b) => b.value.localeCompare(a.value));
   }, [expenses]);
 
+  // Categorias visíveis para este usuário (restrição por allowedCategories)
+  const visibleCategories = useMemo(() => {
+    if (!user.allowedCategories || user.allowedCategories.length === 0) return categories;
+    return categories.filter(c => user.allowedCategories!.includes(c.name));
+  }, [categories, user.allowedCategories]);
+
   const filteredAndSortedExpenses = useMemo(() => {
     let result = [...expenses];
+
+    // Restrição por allowedCategories do usuário
+    if (user.allowedCategories && user.allowedCategories.length > 0) {
+      result = result.filter(e => user.allowedCategories!.includes(e.category));
+    }
 
     // 1. Search Query — usa debouncedSearch (não recalcula a cada tecla)
     if (debouncedSearch.trim() !== "") {
@@ -3030,7 +3041,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                                   >
                                     Todas as categorias
                                   </button>
-                                  {categories.map((cat) => (
+                                  {visibleCategories.map((cat) => (
                                     <button
                                       key={cat.name}
                                       type="button"
@@ -3284,7 +3295,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
         user={user} 
         expense={expenseToEdit}
         onSave={handleSaveExpense}
-        categories={categories}
+        categories={visibleCategories}
       />
       <ExpenseDetailModal
         isOpen={!!selectedExpense}
@@ -3295,10 +3306,10 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
         categories={categories}
         users={users}
       />
-      <CategorySettingsModal 
-        isOpen={isSettingsOpen} 
-        onClose={() => setIsSettingsOpen(false)} 
-        categories={categories}
+      <CategorySettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        categories={visibleCategories}
         onAdd={handleAddCategory}
         onDelete={handleDeleteCategory}
         onEdit={handleEditCategory}

@@ -5,6 +5,7 @@ export interface User {
   color: string;
   initials: string;
   photoUrl?: string;
+  allowedCategories?: string[] | null; // null = acesso total
 }
 
 export interface Expense {
