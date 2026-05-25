@@ -2388,15 +2388,13 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
   const [view, setView] = useState<'overview' | 'list'>('overview');
 
-  // Esconde header ao rolar para baixo, mostra ao rolar para cima
+  // Esconde header ao rolar para baixo, só volta quando chega no topo
   const [headerVisible, setHeaderVisible] = useState(true);
   useEffect(() => {
-    let lastY = window.scrollY;
     const onScroll = () => {
       const y = window.scrollY;
-      if (y > lastY && y > 60) setHeaderVisible(false);
-      else setHeaderVisible(true);
-      lastY = y;
+      if (y <= 10) setHeaderVisible(true);
+      else setHeaderVisible(false);
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
