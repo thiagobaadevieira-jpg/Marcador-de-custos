@@ -2915,8 +2915,8 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                           if (selectedCategoryFilter !== "all") {
                             setSelectedCategoryFilter("all");
                           }
-                          if (selectedMonthFilter !== "all") {
-                            setSelectedMonthFilter("all");
+                          if (selectedMonthFilter !== "all" && selectedMonthFilter !== currentYearMonth) {
+                            setSelectedMonthFilter(currentYearMonth);
                           }
                         }
                       }}
@@ -2946,7 +2946,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                 </div>
 
                 {/* Active Filters Bar */}
-                {!searchQuery && (selectedCategoryFilter !== "all" || sortOrder !== "none" || selectedMonthFilter !== "all") && (
+                {!searchQuery && (selectedCategoryFilter !== "all" || sortOrder !== "none" || (selectedMonthFilter !== "all" && selectedMonthFilter !== currentYearMonth)) && (
                   <motion.div 
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
@@ -2967,10 +2967,10 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                       </div>
                     )}
 
-                    {selectedMonthFilter !== "all" && (
+                    {selectedMonthFilter !== "all" && selectedMonthFilter !== currentYearMonth && (
                       <div className="flex items-center gap-1.5 bg-white/5 border border-white/5 text-white/70 px-2.5 py-1 rounded-full text-[10px] font-bold">
                         <span>Mês: {availableMonths.find(m => m.value === selectedMonthFilter)?.label}</span>
-                        <button type="button" onClick={() => setSelectedMonthFilter("all")} className="hover:text-white transition-colors cursor-pointer">
+                        <button type="button" onClick={() => setSelectedMonthFilter(currentYearMonth)} className="hover:text-white transition-colors cursor-pointer">
                           <X className="w-3 h-3 text-white/40 hover:text-white" />
                         </button>
                       </div>
@@ -2991,7 +2991,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                       type="button"
                       onClick={() => {
                         setSelectedCategoryFilter("all");
-                        setSelectedMonthFilter("all");
+                        setSelectedMonthFilter(currentYearMonth);
                         setSortOrder("none");
                       }}
                       className="ml-auto text-[10px] font-black uppercase tracking-wider text-blue-400 hover:text-blue-300 transition-colors bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-full flex items-center gap-1 cursor-pointer"
@@ -3243,13 +3243,13 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                       <p className="text-xs font-bold text-white/50">Nenhum lançamento encontrado</p>
                       <p className="text-[10px] text-white/20 px-4 leading-relaxed font-medium">Tente ajustar seus termos de pesquisa ou os filtros ativos (categoria e ordenação).</p>
                     </div>
-                    {(selectedCategoryFilter !== "all" || sortOrder !== "none" || searchQuery !== "" || selectedMonthFilter !== "all") && (
+                    {(selectedCategoryFilter !== "all" || sortOrder !== "none" || searchQuery !== "" || (selectedMonthFilter !== "all" && selectedMonthFilter !== currentYearMonth)) && (
                       <button
                         type="button"
                         onClick={() => {
                           setSearchQuery("");
                           setSelectedCategoryFilter("all");
-                          setSelectedMonthFilter("all");
+                          setSelectedMonthFilter(currentYearMonth);
                           setSortOrder("none");
                         }}
                         className="mx-auto text-xs font-bold bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 px-5 h-10 rounded-xl transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
