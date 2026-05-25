@@ -77,22 +77,14 @@ const CategorySettingsModal = ({
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-slate-950/50 backdrop-blur-md z-[200]"
-          />
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0, y: 15 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: 15 }}
-            className="fixed inset-4 m-auto max-w-sm h-fit max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none bg-[#161929]/90 backdrop-blur-xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)]"
-          >
+    <>
+      <div
+        onClick={onClose}
+        className="fixed inset-0 bg-slate-950/50 backdrop-blur-md z-[200]"
+      />
+      <div
+        className="fixed inset-4 m-auto max-w-sm h-fit max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none bg-[#161929]/90 backdrop-blur-xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)]"
+      >
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-2xl font-black tracking-tight">Categorias</h2>
               <button 
@@ -167,7 +159,7 @@ const CategorySettingsModal = ({
                 </button>
               </div>
             </div>
-          </motion.div>
+          </div>
 
           <ConfirmationModal 
             isOpen={!!catToDelete}
@@ -179,9 +171,7 @@ const CategorySettingsModal = ({
             title="Excluir Categoria?"
             message={`Tem certeza que deseja remover a categoria "${catToDelete}"? Todos os gastos vinculados a ela permanecerão, mas a categoria será removida do painel.`}
           />
-        </>
-      )}
-    </AnimatePresence>
+    </>
   );
 };
 
@@ -322,20 +312,14 @@ const NotificationSettingsModal = ({
   const minutesArray = ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"];
 
   return (
-    <AnimatePresence>
+    <>
       {isOpen && (
         <>
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <div
             onClick={onClose}
             className="fixed inset-0 bg-slate-950/50 backdrop-blur-md z-[200]"
           />
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0, y: 15 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: 15 }}
+          <div
             className="fixed inset-4 m-auto max-w-sm h-fit max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none bg-[#161929]/90 backdrop-blur-xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)]"
           >
             <div className="flex justify-between items-center mb-6">
@@ -394,25 +378,18 @@ const NotificationSettingsModal = ({
                   type="button"
                   onClick={() => handleToggleChange(!enabled)}
                   className={cn(
-                    "w-12 h-7 rounded-full p-1 transition-colors relative flex items-center shadow-inner",
+                    "w-12 h-7 rounded-full p-1 relative flex items-center shadow-inner",
                     enabled ? "bg-blue-500" : "bg-white/10"
                   )}
                 >
-                  <motion.div 
-                    layout
-                    className="w-5 h-5 rounded-full bg-white shadow"
-                    animate={{ x: enabled ? 20 : 0 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  <div
+                    className={cn("w-5 h-5 rounded-full bg-white shadow", enabled ? "translate-x-5" : "translate-x-0")}
                   />
                 </button>
               </div>
 
               {enabled && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="space-y-4"
-                >
+                <div className="space-y-4">
                   <div className="space-y-2">
                     <p className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1 text-left">Horário de Aviso</p>
                     <div ref={dropdownRef} className="flex items-center gap-3 relative">
@@ -431,12 +408,8 @@ const NotificationSettingsModal = ({
                           <span className="text-lg font-black text-white">{currentHour}</span>
                         </button>
 
-                        <AnimatePresence>
-                          {activeDropdown === 'hour' && (
-                            <motion.div
-                              initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                              animate={{ opacity: 1, y: 0, scale: 1 }}
-                              exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        {activeDropdown === 'hour' && (
+                            <div
                               className="absolute top-full left-0 right-0 mt-2 max-h-48 overflow-y-auto bg-[#181b2c]/95 backdrop-blur-lg border border-white/10 rounded-2xl shadow-2xl z-[250] py-1 scrollbar-none"
                             >
                               {hoursArray.map(h => (
@@ -455,9 +428,8 @@ const NotificationSettingsModal = ({
                                   {h}
                                 </button>
                               ))}
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                            </div>
+                        )}
                       </div>
 
                       <span className="text-2xl font-black text-white/20 select-none">:</span>
@@ -476,12 +448,8 @@ const NotificationSettingsModal = ({
                           <span className="text-lg font-black text-white">{currentMinute}</span>
                         </button>
 
-                        <AnimatePresence>
-                          {activeDropdown === 'minute' && (
-                            <motion.div
-                              initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                              animate={{ opacity: 1, y: 0, scale: 1 }}
-                              exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        {activeDropdown === 'minute' && (
+                            <div
                               className="absolute top-full left-0 right-0 mt-2 max-h-48 overflow-y-auto bg-[#181b2c]/95 backdrop-blur-lg border border-white/10 rounded-2xl shadow-2xl z-[250] py-1 scrollbar-none"
                             >
                               {minutesArray.map(m => (
@@ -500,9 +468,8 @@ const NotificationSettingsModal = ({
                                   {m}
                                 </button>
                               ))}
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                            </div>
+                        )}
                       </div>
 
                     </div>
@@ -553,22 +520,22 @@ const NotificationSettingsModal = ({
                       Notificações Push não são suportadas pelo seu navegador atual ou aba de visualização privada.
                     </div>
                   )}
-                </motion.div>
+                </div>
               )}
             </div>
 
             <div className="mt-8 pt-6 border-t border-white/5">
-              <button 
+              <button
                 onClick={onClose}
                 className="w-full h-14 btn-gradient rounded-2xl font-bold text-sm shadow-xl active:scale-95 transition-all text-white"
               >
                 Concluir Configuração
               </button>
             </div>
-          </motion.div>
+          </div>
         </>
       )}
-    </AnimatePresence>
+    </>
   );
 };
 
@@ -1295,20 +1262,14 @@ const ExportModal = ({ isOpen, onClose, expenses, categories, users }: ExportMod
   };
 
   return (
-    <AnimatePresence>
+    <>
       {isOpen && (
         <>
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <div
             onClick={onClose}
             className="fixed inset-0 bg-slate-950/50 backdrop-blur-md z-[200]"
           />
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0, y: 15 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: 15 }}
+          <div
             className="fixed inset-4 m-auto max-w-md h-fit max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none bg-[#161929]/90 backdrop-blur-xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)]"
           >
             <div className="flex justify-between items-center mb-8">
@@ -1354,14 +1315,8 @@ const ExportModal = ({ isOpen, onClose, expenses, categories, users }: ExportMod
               </div>
 
               {/* Month Selector Dropdown if "month" is active */}
-              <AnimatePresence>
-                {exportPeriod === "month" && availableMonths.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="space-y-3 overflow-visible"
-                  >
+              {exportPeriod === "month" && availableMonths.length > 0 && (
+                  <div className="space-y-3 overflow-visible">
                     <p className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Escolha o Mês</p>
                     <div className="relative">
                       <button
@@ -1383,13 +1338,8 @@ const ExportModal = ({ isOpen, onClose, expenses, categories, users }: ExportMod
                         />
                       )}
 
-                      <AnimatePresence>
-                        {isDropdownOpen && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                            transition={{ duration: 0.15 }}
+                      {isDropdownOpen && (
+                          <div
                             className="absolute left-0 right-0 mt-2 bg-[#12141c]/95 backdrop-blur-lg border border-white/10 rounded-2xl p-2 shadow-2xl z-[215] max-h-48 overflow-y-auto scrollbar-none select-none"
                           >
                             {availableMonths.map(month => (
@@ -1413,13 +1363,11 @@ const ExportModal = ({ isOpen, onClose, expenses, categories, users }: ExportMod
                                 )}
                               </button>
                             ))}
-                          </motion.div>
+                          </div>
                         )}
-                      </AnimatePresence>
                     </div>
-                  </motion.div>
+                  </div>
                 )}
-              </AnimatePresence>
 
               {/* Live instant summary preview */}
               <div className="p-6 bg-white/5 rounded-3xl border border-white/5 space-y-4">
@@ -1479,10 +1427,10 @@ const ExportModal = ({ isOpen, onClose, expenses, categories, users }: ExportMod
                 </p>
               </div>
             </div>
-          </motion.div>
+          </div>
         </>
       )}
-    </AnimatePresence>
+    </>
   );
 };
 
@@ -1498,22 +1446,14 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }: {
   if (!isOpen) return null;
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[300]"
-          />
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-            className="fixed inset-4 m-auto max-w-sm h-fit glass rounded-[48px] p-10 z-[301] border border-red-500/20 shadow-2xl text-center"
-          >
+    <>
+      <div
+        onClick={onClose}
+        className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[300]"
+      />
+      <div
+        className="fixed inset-4 m-auto max-w-sm h-fit glass rounded-[48px] p-10 z-[301] border border-red-500/20 shadow-2xl text-center"
+      >
             <div className="w-20 h-20 bg-red-500/10 rounded-[32%] flex items-center justify-center mx-auto mb-6 text-red-500 shadow-[0_0_30px_rgba(239,68,68,0.2)]">
               <AlertCircle className="w-10 h-10" />
             </div>
@@ -1534,10 +1474,8 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }: {
                 Cancelar
               </button>
             </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+      </div>
+    </>
   );
 };
 
@@ -1624,20 +1562,14 @@ const ProfileModal = ({ isOpen, onClose, user, email, onSaved }: ProfileModalPro
   };
 
   return (
-    <AnimatePresence>
+    <>
       {isOpen && (
         <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <div
             onClick={onClose}
             className="fixed inset-0 bg-slate-950/50 backdrop-blur-md z-[200]"
           />
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0, y: 15 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: 15 }}
+          <div
             className="fixed inset-4 m-auto max-w-sm h-fit max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none bg-[#161929]/90 backdrop-blur-xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)]"
           >
             <div className="flex justify-between items-center mb-8">
@@ -1746,10 +1678,10 @@ const ProfileModal = ({ isOpen, onClose, user, email, onSaved }: ProfileModalPro
                 {saving ? 'Salvando...' : 'Salvar Alterações'}
               </button>
             </div>
-          </motion.div>
+          </div>
         </>
       )}
-    </AnimatePresence>
+    </>
   );
 };
 
@@ -2731,81 +2663,73 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
         </div>
         
         <div className="flex items-center gap-3 relative" ref={menuRef}>
-          <button 
+          <button
             type="button"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="p-2.5 glass rounded-xl hover:bg-white/5 transition-colors group"
+            className="p-2.5 glass rounded-xl"
           >
-            <Menu className="w-5 h-5 text-white/40 group-hover:text-white transition-colors" />
+            <Menu className="w-5 h-5 text-white/40" />
           </button>
 
-          <AnimatePresence>
-            {isMenuOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 6 }}
-                transition={{ duration: 0.15 }}
-                className="absolute top-full right-0 mt-3 w-56 bg-[#161929]/95 backdrop-blur-lg border border-white/10 rounded-2xl shadow-2xl p-2 z-[90] overflow-hidden"
-              >
-                  <button
-                    onClick={() => {
-                      setIsProfileOpen(true);
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 hover:text-blue-400 transition-all text-sm font-bold text-white/60 text-left group/profile"
-                  >
-                    {user.photoUrl ? (
-                      <img src={user.photoUrl} alt="" className="w-5 h-5 rounded-full object-cover border border-white/10" />
-                    ) : (
-                      <UserIcon className="w-4 h-4 group-hover/profile:scale-110 transition-transform" />
-                    )}
-                    <span>Perfil</span>
-                  </button>
+          {isMenuOpen && (
+            <div className="absolute top-full right-0 mt-3 w-56 bg-[#161929]/95 backdrop-blur-lg border border-white/10 rounded-2xl shadow-2xl p-2 z-[90] overflow-hidden">
+                <button
+                  onClick={() => {
+                    setIsProfileOpen(true);
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl text-sm font-bold text-white/60 text-left"
+                >
+                  {user.photoUrl ? (
+                    <img src={user.photoUrl} alt="" className="w-5 h-5 rounded-full object-cover border border-white/10" />
+                  ) : (
+                    <UserIcon className="w-4 h-4" />
+                  )}
+                  <span>Perfil</span>
+                </button>
 
-                  <button
-                    onClick={() => {
-                      setIsSettingsOpen(true);
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 hover:text-blue-400 transition-all text-sm font-bold text-white/60 text-left group/settings"
-                  >
-                    <Settings className="w-4 h-4 group-hover/settings:rotate-45 transition-transform" />
-                    <span>Categorias</span>
-                  </button>
+                <button
+                  onClick={() => {
+                    setIsSettingsOpen(true);
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl text-sm font-bold text-white/60 text-left"
+                >
+                  <Settings className="w-4 h-4" />
+                  <span>Categorias</span>
+                </button>
 
-                  <button 
-                    onClick={() => {
-                      setIsExportOpen(true);
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 hover:text-emerald-400 transition-all text-sm font-bold text-white/60 text-left group/export"
-                  >
-                    <Download className="w-4 h-4 group-hover/export:translate-y-0.5 transition-transform" />
-                    <span>Exportar Relatório</span>
-                  </button>
+                <button
+                  onClick={() => {
+                    setIsExportOpen(true);
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl text-sm font-bold text-white/60 text-left"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Exportar Relatório</span>
+                </button>
 
-                  <button 
-                    onClick={() => {
-                      setIsNotificationsOpen(true);
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 hover:text-blue-400 transition-all text-sm font-bold text-white/60 text-left group/notifications"
-                  >
-                    <Bell className="w-4 h-4 group-hover/notifications:animate-bounce transition-transform" />
-                    <span>Notificações</span>
-                  </button>
+                <button
+                  onClick={() => {
+                    setIsNotificationsOpen(true);
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl text-sm font-bold text-white/60 text-left"
+                >
+                  <Bell className="w-4 h-4" />
+                  <span>Notificações</span>
+                </button>
 
-                  <button 
-                    onClick={onLogout}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-500/10 hover:text-red-400 transition-all text-sm font-bold text-white/60 text-left group/logout"
-                  >
-                    <LogOut className="w-4 h-4 group-hover/logout:-translate-x-1 transition-transform" />
-                    <span>Sair da Conta</span>
-                  </button>
-                </motion.div>
-            )}
-          </AnimatePresence>
+                <button
+                  onClick={onLogout}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl text-sm font-bold text-white/60 text-left"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Sair da Conta</span>
+                </button>
+              </div>
+          )}
         </div>
       </header>
 
