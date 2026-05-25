@@ -2834,14 +2834,13 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
           </button>
         </div>
 
-        <AnimatePresence mode="sync">
+        <AnimatePresence mode="wait">
           {view === 'overview' ? (
             <motion.div
               key="overview"
               initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
+              animate={{ opacity: 1, transition: { duration: 0.15 } }}
+              exit={{ opacity: 0, transition: { duration: 0.05 } }}
               className="space-y-6"
             >
               {/* Hero Stats Grid */}
@@ -2946,9 +2945,8 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
             <motion.div
               key="list"
               initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
+              animate={{ opacity: 1, transition: { duration: 0.15 } }}
+              exit={{ opacity: 0, transition: { duration: 0.05 } }}
               className="space-y-6"
             >
               {/* Search/Filter Container */}
