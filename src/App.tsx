@@ -2473,7 +2473,8 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("all");
-  const [selectedMonthFilter, setSelectedMonthFilter] = useState("all");
+  const currentYearMonth = `${new Date().getFullYear()}-${new Date().getMonth()}`;
+  const [selectedMonthFilter, setSelectedMonthFilter] = useState(currentYearMonth);
   const [sortOrder, setSortOrder] = useState<'none' | 'asc' | 'desc'>('none');
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
   const [isCategoryFilterOpen, setIsCategoryFilterOpen] = useState(false);
@@ -2488,16 +2489,21 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
   const [sentinelEl, setSentinelEl] = useState<HTMLDivElement | null>(null);
 
   const availableMonths = useMemo(() => {
-    const registeredMonths = new Set<string>();
+    const seen = new Map<string, string>(); // key "YYYY-M" → label
     expenses.forEach(e => {
       try {
         const d = new Date(e.createdAt);
-        registeredMonths.add(d.getMonth().toString());
-      } catch (err) {
-        // Safe check for invalid dates
-      }
+        const key = `${d.getFullYear()}-${d.getMonth()}`;
+        if (!seen.has(key)) {
+          const label = d.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+          seen.set(key, label.charAt(0).toUpperCase() + label.slice(1));
+        }
+      } catch (_) {}
     });
-    return ptBRMonths.filter(m => registeredMonths.has(m.value));
+    // Ordenar do mais recente para o mais antigo
+    return Array.from(seen.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => b.value.localeCompare(a.value));
   }, [expenses]);
 
   const filteredAndSortedExpenses = useMemo(() => {
@@ -2518,7 +2524,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
     if (selectedMonthFilter !== "all") {
       result = result.filter(e => {
         const d = new Date(e.createdAt);
-        return d.getMonth().toString() === selectedMonthFilter;
+        return `${d.getFullYear()}-${d.getMonth()}` === selectedMonthFilter;
       });
     }
 
@@ -2949,7 +2955,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
 
                     {selectedMonthFilter !== "all" && (
                       <div className="flex items-center gap-1.5 bg-white/5 border border-white/5 text-white/70 px-2.5 py-1 rounded-full text-[10px] font-bold">
-                        <span>Mês: {ptBRMonths.find(m => m.value === selectedMonthFilter)?.label}</span>
+                        <span>Mês: {availableMonths.find(m => m.value === selectedMonthFilter)?.label}</span>
                         <button type="button" onClick={() => setSelectedMonthFilter("all")} className="hover:text-white transition-colors cursor-pointer">
                           <X className="w-3 h-3 text-white/40 hover:text-white" />
                         </button>
@@ -3079,7 +3085,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                             className="w-full h-11 bg-white/[0.03] hover:bg-white/[0.05] border border-white/10 rounded-xl px-4 flex items-center justify-between text-xs font-bold text-white transition-all select-none"
                           >
                             <span>
-                              {selectedMonthFilter === "all" ? "Todos os meses" : ptBRMonths.find(m => m.value === selectedMonthFilter)?.label}
+                              {selectedMonthFilter === "all" ? "Todos os meses" : availableMonths.find(m => m.value === selectedMonthFilter)?.label}
                             </span>
                             <ChevronDown className={`w-4 h-4 text-white/45 transition-transform duration-200 ${isMonthFilterOpen ? "rotate-180 text-blue-400" : ""}`} />
                           </button>
