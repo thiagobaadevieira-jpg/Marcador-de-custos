@@ -2594,20 +2594,26 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
   }, [searchQuery, selectedCategoryFilter, selectedMonthFilter, sortOrder]);
 
   // Infinite scroll — carrega mais ao sentinela entrar na tela
+  // IMPORTANTE: `view` está nas deps porque o sentinela só existe na aba 'list'.
+  // Sem `view`, o observer é criado antes do sentinela montar e nunca dispara.
   useEffect(() => {
+    if (view !== 'list') return;
     const el = sentinelRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
-          setVisibleCount(prev => Math.min(prev + PAGE_SIZE, filteredAndSortedExpenses.length));
+          setVisibleCount(prev => {
+            if (prev >= filteredAndSortedExpenses.length) return prev;
+            return Math.min(prev + PAGE_SIZE, filteredAndSortedExpenses.length);
+          });
         }
       },
-      { rootMargin: '120px' }
+      { rootMargin: '400px' } // pré-carrega 400px antes de chegar no fim
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [filteredAndSortedExpenses.length, visibleCount]);
+  }, [view, filteredAndSortedExpenses.length, visibleCount]);
 
   // ─── Early returns AFTER all hooks ───────────────────────────────────────────
   if (dataLoading) {
@@ -3243,9 +3249,9 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                     return (
                       <motion.div
                         key={expense.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: (idx % PAGE_SIZE) * 0.04 }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.15 }}
                         onClick={() => setSelectedExpense(expense)}
                         className="interactive-glass rounded-[24px] sm:rounded-[32px] p-4 sm:p-6 flex items-center justify-between cursor-pointer group gap-4"
                       >
