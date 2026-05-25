@@ -2488,7 +2488,10 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
 
   const PAGE_SIZE = 10;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const sentinelRef = useRef<HTMLDivElement>(null);
+  // Callback ref: quando o sentinela monta no DOM o estado muda e o effect dispara garantido.
+  // useRef NÃO funciona aqui porque AnimatePresence atrasa a montagem e o effect
+  // roda antes do elemento existir, então ref.current fica null indefinidamente.
+  const [sentinelEl, setSentinelEl] = useState<HTMLDivElement | null>(null);
 
   const availableMonths = useMemo(() => {
     const registeredMonths = new Set<string>();
@@ -2593,27 +2596,34 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
     setVisibleCount(PAGE_SIZE);
   }, [searchQuery, selectedCategoryFilter, selectedMonthFilter, sortOrder]);
 
-  // Infinite scroll — carrega mais ao sentinela entrar na tela
-  // IMPORTANTE: `view` está nas deps porque o sentinela só existe na aba 'list'.
-  // Sem `view`, o observer é criado antes do sentinela montar e nunca dispara.
+  // Effect 1 — verifica imediatamente após render se o sentinela já está visível.
+  // Cobre o caso de 10 itens não preencherem a tela (sem precisar rolar).
   useEffect(() => {
-    if (view !== 'list') return;
-    const el = sentinelRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setVisibleCount(prev => {
-            if (prev >= filteredAndSortedExpenses.length) return prev;
-            return Math.min(prev + PAGE_SIZE, filteredAndSortedExpenses.length);
-          });
-        }
-      },
-      { rootMargin: '400px' } // pré-carrega 400px antes de chegar no fim
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [view, filteredAndSortedExpenses.length, visibleCount]);
+    if (!sentinelEl) return;
+    const rect = sentinelEl.getBoundingClientRect();
+    if (rect.top < window.innerHeight + 300) {
+      setVisibleCount(prev => {
+        if (prev >= filteredAndSortedExpenses.length) return prev;
+        return Math.min(prev + PAGE_SIZE, filteredAndSortedExpenses.length);
+      });
+    }
+  }, [sentinelEl, visibleCount, filteredAndSortedExpenses.length]);
+
+  // Effect 2 — scroll listener para carregar conforme o usuário rola.
+  useEffect(() => {
+    if (!sentinelEl) return;
+    const check = () => {
+      const rect = sentinelEl.getBoundingClientRect();
+      if (rect.top < window.innerHeight + 300) {
+        setVisibleCount(prev => {
+          if (prev >= filteredAndSortedExpenses.length) return prev;
+          return Math.min(prev + PAGE_SIZE, filteredAndSortedExpenses.length);
+        });
+      }
+    };
+    window.addEventListener('scroll', check, { passive: true });
+    return () => window.removeEventListener('scroll', check);
+  }, [sentinelEl, filteredAndSortedExpenses.length]);
 
   // ─── Early returns AFTER all hooks ───────────────────────────────────────────
   if (dataLoading) {
@@ -3303,8 +3313,8 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                     );
                   })}
 
-                  {/* Sentinela de scroll infinito */}
-                  <div ref={sentinelRef}>
+                  {/* Sentinela de scroll infinito — callback ref para garantir montagem */}
+                  <div ref={setSentinelEl}>
                     {visibleCount < filteredAndSortedExpenses.length ? (
                       <div className="flex flex-col items-center gap-2 py-8">
                         <div className="w-5 h-5 border-2 border-white/10 border-t-white/30 rounded-full animate-spin" />
