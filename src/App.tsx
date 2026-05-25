@@ -2259,7 +2259,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
     Promise.all([db.getExpenses(), db.getCategories(), db.getUsers(), db.getAppSettings()])
       .then(([exps, cats, usrs, settings]) => {
         setExpenses(exps);
-        setCategories(cats.length ? cats : INITIAL_CATEGORIES);
+        setCategories(cats);
         setUsers(usrs.length ? usrs : [user]);
         setNotificationTitle(settings.notificationTitle);
         setNotificationMessage(settings.notificationMessage);
