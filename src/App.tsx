@@ -2797,12 +2797,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                     </h2>
                   </div>
                   <div className="mt-6 sm:mt-8 h-1 w-full bg-white/5 rounded-full overflow-hidden relative">
-                    <motion.div 
-                      initial={{ width: 0 }} 
-                      animate={{ width: '100%' }} 
-                      transition={{ duration: 0.6, ease: "easeOut" }}
-                      className="h-full btn-gradient shadow-[0_0_15px_rgba(59,130,246,0.3)]" 
-                    />
+                    <div className="h-full w-full btn-gradient shadow-[0_0_15px_rgba(59,130,246,0.3)]" />
                   </div>
                 </GlassCard>
 
@@ -2821,12 +2816,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                     </h2>
                   </div>
                   <div className="mt-6 sm:mt-8 h-1 w-full bg-white/5 rounded-full overflow-hidden relative">
-                    <motion.div 
-                      initial={{ width: 0 }} 
-                      animate={{ width: '100%' }} 
-                      transition={{ duration: 0.6, ease: "easeOut" }}
-                      className="h-full bg-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.3)]" 
-                    />
+                    <div className="h-full w-full bg-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.3)]" />
                   </div>
                 </GlassCard>
               </div>
