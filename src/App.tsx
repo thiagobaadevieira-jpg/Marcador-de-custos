@@ -3259,9 +3259,9 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                     return (
                       <motion.div
                         key={expense.id}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.15 }}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.25, delay: (idx % PAGE_SIZE) * 0.04 }}
                         onClick={() => setSelectedExpense(expense)}
                         className="interactive-glass rounded-[24px] sm:rounded-[32px] p-4 sm:p-6 flex items-center justify-between cursor-pointer group gap-4"
                       >
