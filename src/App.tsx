@@ -2486,6 +2486,10 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
   const [isMonthFilterOpen, setIsMonthFilterOpen] = useState(false);
   const [isSortOrderOpen, setIsSortOrderOpen] = useState(false);
 
+  const PAGE_SIZE = 10;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
   const availableMonths = useMemo(() => {
     const registeredMonths = new Set<string>();
     expenses.forEach(e => {
@@ -2583,6 +2587,27 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
   const { scrollY } = useScroll();
   const headerY = useTransform(scrollY, [0, 80], [0, -120]);
   const tabsTop = useTransform(scrollY, [0, 80], [88, 20]);
+
+  // Reset paginação quando filtros/busca mudam
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [searchQuery, selectedCategoryFilter, selectedMonthFilter, sortOrder]);
+
+  // Infinite scroll — carrega mais ao sentinela entrar na tela
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount(prev => Math.min(prev + PAGE_SIZE, filteredAndSortedExpenses.length));
+        }
+      },
+      { rootMargin: '120px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [filteredAndSortedExpenses.length, visibleCount]);
 
   // ─── Early returns AFTER all hooks ───────────────────────────────────────────
   if (dataLoading) {
@@ -3213,13 +3238,14 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                     )}
                   </motion.div>
                 ) : (
-                  filteredAndSortedExpenses.map((expense, idx) => {
+                  <>
+                  {filteredAndSortedExpenses.slice(0, visibleCount).map((expense, idx) => {
                     return (
                       <motion.div
                         key={expense.id}
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: idx * 0.05 }}
+                        transition={{ delay: (idx % PAGE_SIZE) * 0.04 }}
                         onClick={() => setSelectedExpense(expense)}
                         className="interactive-glass rounded-[24px] sm:rounded-[32px] p-4 sm:p-6 flex items-center justify-between cursor-pointer group gap-4"
                       >
@@ -3269,7 +3295,24 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                         </div>
                       </motion.div>
                     );
-                  })
+                  })}
+
+                  {/* Sentinela de scroll infinito */}
+                  <div ref={sentinelRef}>
+                    {visibleCount < filteredAndSortedExpenses.length ? (
+                      <div className="flex flex-col items-center gap-2 py-8">
+                        <div className="w-5 h-5 border-2 border-white/10 border-t-white/30 rounded-full animate-spin" />
+                        <p className="text-[9px] text-white/20 font-bold uppercase tracking-widest">
+                          {visibleCount} de {filteredAndSortedExpenses.length}
+                        </p>
+                      </div>
+                    ) : filteredAndSortedExpenses.length > PAGE_SIZE ? (
+                      <p className="text-center text-[9px] text-white/15 font-bold uppercase tracking-widest py-6">
+                        — {filteredAndSortedExpenses.length} lançamentos —
+                      </p>
+                    ) : null}
+                  </div>
+                  </>
                 )}
               </div>
             </motion.div>
