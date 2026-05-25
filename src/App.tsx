@@ -2327,47 +2327,30 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
       const currentHourMin = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
       
       if (currentHourMin === notificationTime) {
-        const lastNotified = localStorage.getItem('last_notified_minute');
         const todayStr = now.toDateString();
         const lastNotifiedKey = `${todayStr}_${notificationTime}`;
-        
-        if (lastNotified !== lastNotifiedKey) {
-          const hasExpensesToday = expenses.some(e => {
-            const expDate = new Date(e.createdAt);
-            return expDate.toDateString() === todayStr;
-          });
+        const lastNotified = localStorage.getItem('last_notified_minute');
 
-          if (!hasExpensesToday) {
-            const notifTitle = notificationTitle.trim() || "Controle de Gastos";
-            const notifBody = notificationMessage.trim() || "Você lembrou de anotar os seus gastos hoje? 📊";
-            if ('Notification' in window && Notification.permission === 'granted') {
-              try {
-                navigator.serviceWorker.ready.then((registration) => {
-                  registration.showNotification(notifTitle, {
-                    body: notifBody,
-                    icon: "/icon-192.png",
-                    badge: "/badge.svg",
-                    vibrate: [200, 100, 200],
-                    tag: "remind-gastos"
-                  } as any);
-                }).catch(() => {
-                  new Notification(notifTitle, {
-                    body: notifBody,
-                    icon: "/icon-192.png"
-                  });
-                });
-              } catch (err) {
-                new Notification(notifTitle, {
-                  body: notifBody,
-                  icon: "/icon-192.png"
-                });
-              }
-            }
-          }
+        if (lastNotified !== lastNotifiedKey) {
           localStorage.setItem('last_notified_minute', lastNotifiedKey);
+          const notifTitle = notificationTitle.trim() || "Controle de Gastos";
+          const notifBody = notificationMessage.trim() || "Você lembrou de anotar os seus gastos hoje?";
+          if ('Notification' in window && Notification.permission === 'granted') {
+            navigator.serviceWorker.ready.then((registration) => {
+              registration.showNotification(notifTitle, {
+                body: notifBody,
+                icon: "/icon-192.png",
+                badge: "/badge.svg",
+                vibrate: [200, 100, 200],
+                tag: "remind-gastos"
+              } as any);
+            }).catch(() => {
+              new Notification(notifTitle, { body: notifBody, icon: "/icon-192.png" });
+            });
+          }
         }
       }
-    }, 15000);
+    }, 10000);
 
     return () => clearInterval(interval);
   }, [notificationsEnabled, notificationTime, expenses, notificationTitle, notificationMessage]);
