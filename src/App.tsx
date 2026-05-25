@@ -1,9 +1,8 @@
-import React, { useState, useMemo, useRef, useEffect } from "react";
+import React, { useState, useMemo, useRef, useEffect, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { DollarSign, Bell, Plus, LayoutDashboard, List, LogOut, Search, Filter, Camera, X, ChevronDown, Settings, Trash2, Menu, Edit2, AlertCircle, Download, Paperclip, User as UserIcon, Check } from "lucide-react";
 import { cn, formatCurrency } from "@/src/lib/utils";
 import { User, Expense } from "@/src/types";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { supabase } from "@/src/lib/supabase";
 import * as db from "@/src/lib/db";
 import type { Category } from "@/src/lib/db";
@@ -2254,6 +2253,61 @@ const ExpenseDetailModal = ({ isOpen, onClose, expense, onEdit, onDelete, catego
   );
 };
 
+// --- Expense Row (memoizado para evitar re-render em mudanças de estado não relacionadas) ---
+
+interface ExpenseRowProps {
+  expense: Expense;
+  categoryColor: string | undefined;
+  ownerName: string | undefined;
+  idx: number;
+  pageSize: number;
+  onSelect: (e: Expense) => void;
+}
+
+const ExpenseRow = memo(({ expense, categoryColor, ownerName, idx, pageSize, onSelect }: ExpenseRowProps) => (
+  <motion.div
+    initial={{ opacity: 0, x: -20 }}
+    animate={{ opacity: 1, x: 0 }}
+    transition={{ duration: 0.25, delay: (idx % pageSize) * 0.04 }}
+    onClick={() => onSelect(expense)}
+    className="interactive-glass rounded-[24px] sm:rounded-[32px] p-4 sm:p-6 flex items-center justify-between cursor-pointer group gap-4"
+  >
+    <div className="flex items-center gap-4 sm:gap-6 flex-1 min-w-0">
+      <div
+        className="w-2.5 h-2.5 rounded-full shadow-[0_0_12px_currentcolor] shrink-0"
+        style={{ backgroundColor: categoryColor, color: categoryColor }}
+      />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-4 mb-1">
+          <h4 className="font-bold text-sm leading-tight truncate group-hover:text-blue-400 transition-colors">{expense.name}</h4>
+          <div className="flex items-center gap-2.5 shrink-0">
+            {expense.attachmentUrl && <Paperclip className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
+            <p className="font-bold text-sm tracking-tight">{formatCurrency(expense.value)}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="text-[9px] sm:text-[10px] text-white/20 font-black uppercase tracking-widest">
+            {new Date(expense.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+          </p>
+          <span className="w-0.5 h-0.5 rounded-full bg-white/5" />
+          <p className="text-[9px] sm:text-[10px] text-white/20 font-black uppercase tracking-widest">{expense.category}</p>
+          {ownerName && (
+            <>
+              <span className="w-0.5 h-0.5 rounded-full bg-white/5" />
+              <p className="text-[9px] sm:text-[10px] text-white/20 font-black uppercase tracking-widest truncate">
+                por {ownerName}
+              </p>
+            </>
+          )}
+        </div>
+        {expense.note && (
+          <p className="text-[11px] sm:text-[12px] text-white/70 mt-2 italic leading-relaxed break-words whitespace-pre-wrap [word-break:break-word]">"{expense.note}"</p>
+        )}
+      </div>
+    </div>
+  </motion.div>
+));
+
 // --- Dashboard Screen ---
 
 const ptBRMonths = [
@@ -2412,7 +2466,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
     setExpenseToDelete(expense);
   };
 
-  const handleSaveExpense = async (newExpenseData: Omit<Expense, 'id' | 'userId' | 'createdAt'> & { id?: string }) => {
+  const handleSaveExpense = useCallback(async (newExpenseData: Omit<Expense, 'id' | 'userId' | 'createdAt'> & { id?: string }) => {
     if (newExpenseData.id) {
       const { id, ...updates } = newExpenseData;
       await db.updateExpense(id!, updates);
@@ -2421,18 +2475,18 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
       const created = await db.createExpense({ ...newExpenseData, userId: user.id });
       setExpenses(prev => [created, ...prev]);
     }
-  };
+  }, [user.id]);
 
-  const handleAddCategory = async (name: string) => {
+  const handleAddCategory = useCallback(async (name: string) => {
     if (categories.find(c => c.name.toLowerCase() === name.toLowerCase())) return;
     const colors = ["#f87171", "#60a5fa", "#c084fc", "#4ade80", "#fbbf24", "#f472b6", "#2dd4bf", "#fb923c"];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
     const newCat = { name, color: randomColor, initials: name.substring(0, 2).toUpperCase() };
     const created = await db.createCategory(newCat, user.id);
     setCategories(prev => [...prev, created]);
-  };
+  }, [categories, user.id]);
 
-  const handleEditCategory = async (oldName: string, newName: string) => {
+  const handleEditCategory = useCallback(async (oldName: string, newName: string) => {
     if (categories.find(c => c.name.toLowerCase() === newName.toLowerCase())) return;
     const cat = categories.find(c => c.name === oldName);
     if (!cat?.id) return;
@@ -2441,24 +2495,24 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
     await db.updateExpensesCategoryName(oldName, newName);
     setCategories(prev => prev.map(c => c.name === oldName ? { ...c, name: newName, initials: updatedInitials } : c));
     setExpenses(prev => prev.map(e => e.category === oldName ? { ...e, category: newName } : e));
-  };
+  }, [categories]);
 
-  const handleDeleteCategory = async (name: string) => {
+  const handleDeleteCategory = useCallback(async (name: string) => {
     if (categories.length <= 1) return;
     const cat = categories.find(c => c.name === name);
     if (!cat?.id) return;
     await db.deleteCategory(cat.id);
     setCategories(prev => prev.filter(c => c.name !== name));
-  };
+  }, [categories]);
 
-  const confirmDelete = async () => {
+  const confirmDelete = useCallback(async () => {
     if (expenseToDelete) {
       await db.deleteExpense(expenseToDelete.id);
       setExpenses(prev => prev.filter(e => e.id !== expenseToDelete.id));
       setExpenseToDelete(null);
       setSelectedExpense(null);
     }
-  };
+  }, [expenseToDelete]);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -2478,6 +2532,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
   }, [isMenuOpen]);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("all");
   const [selectedMonthFilter, setSelectedMonthFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState<'none' | 'asc' | 'desc'>('none');
@@ -2509,9 +2564,9 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
   const filteredAndSortedExpenses = useMemo(() => {
     let result = [...expenses];
 
-    // 1. Search Query (ignore accentuation or casing if needed, but basic lowerCase is fine and robust)
-    if (searchQuery.trim() !== "") {
-      const q = searchQuery.toLowerCase().trim();
+    // 1. Search Query — usa debouncedSearch (não recalcula a cada tecla)
+    if (debouncedSearch.trim() !== "") {
+      const q = debouncedSearch.toLowerCase().trim();
       result = result.filter(e => e.name.toLowerCase().includes(q));
     }
 
@@ -2536,7 +2591,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
     }
 
     return result;
-  }, [expenses, searchQuery, selectedCategoryFilter, selectedMonthFilter, sortOrder]);
+  }, [expenses, debouncedSearch, selectedCategoryFilter, selectedMonthFilter, sortOrder]);
 
   // O(1) lookup maps — evita scan linear em cada render para cada linha da lista
   const usersById = useMemo(() => {
@@ -2589,10 +2644,16 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
 
   // useScroll/useTransform removidos — parallax JS causava jank no mobile
 
+  // Debounce da busca — evita recalcular lista a cada tecla
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery), 200);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
   // Reset paginação quando filtros/busca mudam
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
-  }, [searchQuery, selectedCategoryFilter, selectedMonthFilter, sortOrder]);
+  }, [debouncedSearch, selectedCategoryFilter, selectedMonthFilter, sortOrder]);
 
   // Effect 1 — verifica imediatamente após render se o sentinela já está visível.
   // Cobre o caso de 10 itens não preencherem a tela (sem precisar rolar).
@@ -3250,63 +3311,17 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                   </motion.div>
                 ) : (
                   <>
-                  {filteredAndSortedExpenses.slice(0, visibleCount).map((expense, idx) => {
-                    return (
-                      <motion.div
-                        key={expense.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.25, delay: (idx % PAGE_SIZE) * 0.04 }}
-                        onClick={() => setSelectedExpense(expense)}
-                        className="interactive-glass rounded-[24px] sm:rounded-[32px] p-4 sm:p-6 flex items-center justify-between cursor-pointer group gap-4"
-                      >
-                        <div className="flex items-center gap-4 sm:gap-6 flex-1 min-w-0">
-                          {(() => {
-                            const color = categoryColorByName.get(expense.category);
-                            return (
-                              <div
-                                className="w-2.5 h-2.5 rounded-full shadow-[0_0_12px_currentcolor] shrink-0"
-                                style={{ backgroundColor: color, color }}
-                              />
-                            );
-                          })()}
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center justify-between gap-4 mb-1">
-                              <h4 className="font-bold text-sm leading-tight truncate group-hover:text-blue-400 transition-colors">{expense.name}</h4>
-                              <div className="flex items-center gap-2.5 shrink-0">
-                                {expense.attachmentUrl && (
-                                  <Paperclip className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                                )}
-                                <p className="font-bold text-sm tracking-tight">{formatCurrency(expense.value)}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="text-[9px] sm:text-[10px] text-white/20 font-black uppercase tracking-widest">
-                                {new Date(expense.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
-                              </p>
-                              <span className="w-0.5 h-0.5 rounded-full bg-white/5" />
-                              <p className="text-[9px] sm:text-[10px] text-white/20 font-black uppercase tracking-widest">{expense.category}</p>
-                              {(() => {
-                                const owner = usersById.get(expense.userId);
-                                if (!owner) return null;
-                                return (
-                                  <>
-                                    <span className="w-0.5 h-0.5 rounded-full bg-white/5" />
-                                    <p className="text-[9px] sm:text-[10px] text-white/20 font-black uppercase tracking-widest truncate">
-                                      por {owner.name}
-                                    </p>
-                                  </>
-                                );
-                              })()}
-                            </div>
-                            {expense.note && (
-                              <p className="text-[11px] sm:text-[12px] text-white/70 mt-2 italic leading-relaxed break-words whitespace-pre-wrap [word-break:break-word]">"{expense.note}"</p>
-                            )}
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
+                  {filteredAndSortedExpenses.slice(0, visibleCount).map((expense, idx) => (
+                    <ExpenseRow
+                      key={expense.id}
+                      expense={expense}
+                      categoryColor={categoryColorByName.get(expense.category)}
+                      ownerName={usersById.get(expense.userId)?.name}
+                      idx={idx}
+                      pageSize={PAGE_SIZE}
+                      onSelect={setSelectedExpense}
+                    />
+                  ))}
 
                   {/* Sentinela de scroll infinito — callback ref para garantir montagem */}
                   <div ref={setSentinelEl}>
