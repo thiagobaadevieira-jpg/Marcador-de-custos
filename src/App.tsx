@@ -2760,7 +2760,23 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-6 pt-28">
+      <div
+        className="max-w-2xl mx-auto px-6 pt-28"
+        onTouchStart={(e) => {
+          const t = e.touches[0];
+          (e.currentTarget as any)._swipeX = t.clientX;
+          (e.currentTarget as any)._swipeY = t.clientY;
+        }}
+        onTouchEnd={(e) => {
+          const el = e.currentTarget as any;
+          const dx = e.changedTouches[0].clientX - el._swipeX;
+          const dy = Math.abs(e.changedTouches[0].clientY - el._swipeY);
+          if (Math.abs(dx) > 60 && dy < 80) {
+            if (dx < 0) setView('list');
+            else setView('overview');
+          }
+        }}
+      >
         {/* View Switcher Refined */}
         <div className={`flex p-1.5 glass rounded-2xl mb-10 sticky z-[70] backdrop-blur-lg transition-all duration-300 ${headerVisible ? 'top-[72px]' : 'top-2'}`}>
           <button 
