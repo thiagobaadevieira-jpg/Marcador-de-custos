@@ -2796,9 +2796,6 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                       <span className="text-sm sm:text-lg opacity-20">,{formatCurrency(currentMonthTotal).split(',')[1]}</span>
                     </h2>
                   </div>
-                  <div className="mt-6 sm:mt-8 h-1 w-full bg-white/5 rounded-full overflow-hidden relative">
-                    <div className="h-full w-full btn-gradient shadow-[0_0_15px_rgba(59,130,246,0.3)]" />
-                  </div>
                 </GlassCard>
 
                 <GlassCard className="p-4 sm:p-6 pb-6 sm:pb-8 flex flex-col justify-between relative overflow-hidden group">
@@ -2814,9 +2811,6 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                       {formatCurrency(last7DaysTotal).split(',')[0]}
                       <span className="text-sm sm:text-lg opacity-20">,{formatCurrency(last7DaysTotal).split(',')[1]}</span>
                     </h2>
-                  </div>
-                  <div className="mt-6 sm:mt-8 h-1 w-full bg-white/5 rounded-full overflow-hidden relative">
-                    <div className="h-full w-full bg-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.3)]" />
                   </div>
                 </GlassCard>
               </div>
