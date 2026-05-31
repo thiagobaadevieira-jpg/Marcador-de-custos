@@ -2320,42 +2320,24 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
     scheduleSettingsSave({ notificationMessage: val });
   };
 
-  // Background scheduler for reminders
+  // Agenda notificação via Service Worker (funciona mesmo com app em background)
   React.useEffect(() => {
-    if (!notificationsEnabled) return;
+    if (!('serviceWorker' in navigator) || Notification.permission !== 'granted') return;
 
-    const interval = setInterval(() => {
-      const now = new Date();
-      const currentHourMin = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-      
-      if (currentHourMin === notificationTime) {
-        const todayStr = now.toDateString();
-        const lastNotifiedKey = `${todayStr}_${notificationTime}`;
-        const lastNotified = localStorage.getItem('last_notified_minute');
-
-        if (lastNotified !== lastNotifiedKey) {
-          localStorage.setItem('last_notified_minute', lastNotifiedKey);
-          const notifTitle = notificationTitle.trim() || "Controle de Gastos";
-          const notifBody = notificationMessage.trim() || "Você lembrou de anotar os seus gastos hoje?";
-          if ('Notification' in window && Notification.permission === 'granted') {
-            navigator.serviceWorker.ready.then((registration) => {
-              registration.showNotification(notifTitle, {
-                body: notifBody,
-                icon: "/icon-192.png",
-                badge: "/badge.svg",
-                vibrate: [200, 100, 200],
-                tag: "remind-gastos"
-              } as any);
-            }).catch(() => {
-              new Notification(notifTitle, { body: notifBody, icon: "/icon-192.png" });
-            });
-          }
-        }
+    navigator.serviceWorker.ready.then((reg) => {
+      if (!reg.active) return;
+      if (notificationsEnabled) {
+        reg.active.postMessage({
+          type: 'SCHEDULE_NOTIFICATION',
+          time: notificationTime,
+          title: notificationTitle.trim() || 'Controle de Gastos',
+          body: notificationMessage.trim() || 'Você lembrou de anotar os seus gastos hoje?',
+        });
+      } else {
+        reg.active.postMessage({ type: 'CANCEL_NOTIFICATION' });
       }
-    }, 10000);
-
-    return () => clearInterval(interval);
-  }, [notificationsEnabled, notificationTime, expenses, notificationTitle, notificationMessage]);
+    });
+  }, [notificationsEnabled, notificationTime, notificationTitle, notificationMessage]);
 
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [expenseToEdit, setExpenseToEdit] = useState<Expense | null>(null);
