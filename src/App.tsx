@@ -2659,8 +2659,28 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
     );
   }
 
+  const handleSwipeStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    (e.currentTarget as any)._swipeX = t.clientX;
+    (e.currentTarget as any)._swipeY = t.clientY;
+  };
+
+  const handleSwipeEnd = (e: React.TouchEvent) => {
+    const el = e.currentTarget as any;
+    const dx = e.changedTouches[0].clientX - el._swipeX;
+    const dy = Math.abs(e.changedTouches[0].clientY - el._swipeY);
+    if (Math.abs(dx) > 60 && dy < 80) {
+      if (dx < 0) setView('list');
+      else setView('overview');
+    }
+  };
+
   return (
-    <div className="pb-32 pt-0 min-h-screen">
+    <div
+      className="pb-32 pt-0 min-h-screen"
+      onTouchStart={handleSwipeStart}
+      onTouchEnd={handleSwipeEnd}
+    >
       {/* Header */}
       <header className={`fixed top-0 inset-x-0 glass border-b border-white/5 px-6 py-5 flex items-center justify-between z-[80] backdrop-blur-lg transition-transform duration-300 ${headerVisible ? 'translate-y-0' : '-translate-y-full'}`}>
         <div className="flex items-center gap-3">
@@ -2743,23 +2763,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
         </div>
       </header>
 
-      <div
-        className="max-w-2xl mx-auto px-6 pt-28"
-        onTouchStart={(e) => {
-          const t = e.touches[0];
-          (e.currentTarget as any)._swipeX = t.clientX;
-          (e.currentTarget as any)._swipeY = t.clientY;
-        }}
-        onTouchEnd={(e) => {
-          const el = e.currentTarget as any;
-          const dx = e.changedTouches[0].clientX - el._swipeX;
-          const dy = Math.abs(e.changedTouches[0].clientY - el._swipeY);
-          if (Math.abs(dx) > 60 && dy < 80) {
-            if (dx < 0) setView('list');
-            else setView('overview');
-          }
-        }}
-      >
+      <div className="max-w-2xl mx-auto px-6 pt-28">
         {/* View Switcher Refined */}
         <div className={`flex p-1.5 glass rounded-2xl mb-10 sticky z-[70] backdrop-blur-lg transition-all duration-300 ${headerVisible ? 'top-[72px]' : 'top-2'}`}>
           <button 
