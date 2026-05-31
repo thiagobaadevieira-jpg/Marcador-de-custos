@@ -1766,10 +1766,12 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
   onSave: (expense: Omit<Expense, 'id' | 'userId' | 'createdAt'> & { id?: string }) => void,
   categories: Category[]
 }) => {
+  const todayISO = new Date().toISOString().slice(0, 10);
   const [name, setName] = useState(expense?.name || "");
   const [value, setValue] = useState(expense?.value.toString() || "");
   const [note, setNote] = useState(expense?.note || "");
   const [category, setCategory] = useState(expense?.category || categories[0]?.name || "");
+  const [expenseDate, setExpenseDate] = useState(expense?.expenseDate || todayISO);
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [attachmentUrl, setAttachmentUrl] = useState(expense?.attachmentUrl || "");
 
@@ -1786,12 +1788,14 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
       setNote(expense.note || "");
       setCategory(expense.category);
       setAttachmentUrl(expense.attachmentUrl || "");
+      setExpenseDate(expense.expenseDate || todayISO);
     } else if (isOpen) {
       setName("");
       setValue("");
       setNote("");
       setCategory(categories[0]?.name || "");
       setAttachmentUrl("");
+      setExpenseDate(todayISO);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expense, isOpen]);
@@ -1820,7 +1824,8 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
       value: parseFloat(value),
       note,
       category,
-      attachmentUrl
+      attachmentUrl,
+      expenseDate,
     });
     onClose();
   };
@@ -1922,8 +1927,20 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
               </div>
 
               <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Data do Gasto</label>
+                <input
+                  type="date"
+                  value={expenseDate}
+                  max={todayISO}
+                  onChange={(e) => setExpenseDate(e.target.value)}
+                  className="w-full h-16 glass rounded-2xl px-6 text-base font-bold outline-none focus:border-blue-500/50 transition-colors"
+                  style={{ colorScheme: 'dark' }}
+                />
+              </div>
+
+              <div className="space-y-3">
                 <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Observações Adicionais</label>
-                <textarea 
+                <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   placeholder="Detalhes que ajudam no fechamento..."
@@ -2210,7 +2227,7 @@ const ExpenseRow = memo(({ expense, categoryColor, ownerName, idx, pageSize, onS
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <p className="text-[9px] sm:text-[10px] text-white/20 font-black uppercase tracking-widest">
-            {new Date(expense.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+            {new Date(expense.expenseDate + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
           </p>
           <span className="w-0.5 h-0.5 rounded-full bg-white/5" />
           <p className="text-[9px] sm:text-[10px] text-white/20 font-black uppercase tracking-widest">{expense.category}</p>
@@ -2460,7 +2477,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
     const seen = new Map<string, string>(); // key "YYYY-M" → label
     expenses.forEach(e => {
       try {
-        const d = new Date(e.createdAt);
+        const d = new Date(e.expenseDate + 'T12:00:00');
         const key = `${d.getFullYear()}-${d.getMonth()}`;
         if (!seen.has(key)) {
           const label = d.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
@@ -2502,7 +2519,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
     // 2.5 Month Filter
     if (selectedMonthFilter !== "all") {
       result = result.filter(e => {
-        const d = new Date(e.createdAt);
+        const d = new Date(e.expenseDate + 'T12:00:00');
         return `${d.getFullYear()}-${d.getMonth()}` === selectedMonthFilter;
       });
     }
@@ -2552,7 +2569,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
     const currentMonth = now.getMonth();
     return expenses
       .filter(e => {
-        const d = new Date(e.createdAt);
+        const d = new Date(e.expenseDate + 'T12:00:00');
         return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
       })
       .reduce((sum, e) => sum + e.value, 0);
@@ -2562,7 +2579,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     return expenses
-      .filter(e => new Date(e.createdAt) >= sevenDaysAgo)
+      .filter(e => new Date(e.expenseDate + 'T12:00:00') >= sevenDaysAgo)
       .reduce((sum, e) => sum + e.value, 0);
   }, [expenses]);
 

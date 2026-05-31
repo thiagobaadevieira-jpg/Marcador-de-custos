@@ -17,6 +17,7 @@ export interface Expense {
   note?: string;
   attachmentUrl?: string;
   createdAt: string;
+  expenseDate: string; // data real do gasto (YYYY-MM-DD)
 }
 
 export interface UserStats {

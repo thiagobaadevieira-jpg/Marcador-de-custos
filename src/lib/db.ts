@@ -6,6 +6,10 @@ export type Category = { id?: string; name: string; color: string; initials: str
 // ─── Expenses ───────────────────────────────────────────────────────────────
 
 function rowToExpense(row: Record<string, unknown>): Expense {
+  // expense_date vem como "YYYY-MM-DD", fallback para data do created_at
+  const expenseDate = (row.expense_date as string)
+    || (row.created_at as string)?.slice(0, 10)
+    || new Date().toISOString().slice(0, 10);
   return {
     id: row.id as string,
     userId: row.user_id as string,
@@ -15,6 +19,7 @@ function rowToExpense(row: Record<string, unknown>): Expense {
     note: row.note ? (row.note as string) : undefined,
     attachmentUrl: row.attachment_url ? (row.attachment_url as string) : undefined,
     createdAt: row.created_at as string,
+    expenseDate,
   };
 }
 
@@ -39,6 +44,7 @@ export async function createExpense(
       value: data.value,
       note: data.note ?? null,
       attachment_url: data.attachmentUrl ?? null,
+      expense_date: data.expenseDate ?? new Date().toISOString().slice(0, 10),
     })
     .select()
     .single();
@@ -58,6 +64,7 @@ export async function updateExpense(
       value: data.value,
       note: data.note ?? null,
       attachment_url: data.attachmentUrl ?? null,
+      expense_date: data.expenseDate,
     })
     .eq('id', id);
   if (error) throw error;
