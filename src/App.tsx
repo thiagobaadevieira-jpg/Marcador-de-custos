@@ -1778,6 +1778,7 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
   // Sync state if expense changes (e.g. when opening to edit)
+  // IMPORTANTE: não incluir `categories` nas deps — causa reset dos campos ao tirar foto no mobile
   React.useEffect(() => {
     if (expense) {
       setName(expense.name);
@@ -1792,7 +1793,8 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
       setCategory(categories[0]?.name || "");
       setAttachmentUrl("");
     }
-  }, [expense, isOpen, categories]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expense, isOpen]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
