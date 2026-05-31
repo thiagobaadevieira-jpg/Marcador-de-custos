@@ -1853,7 +1853,7 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
                   type="text" 
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Ex: Servidores AWS, Almoço..."
+                  placeholder=""
                   className="w-full h-16 glass rounded-2xl px-6 text-xl outline-none focus:border-blue-500/50 transition-colors placeholder:text-white/5 font-bold"
                 />
               </div>
