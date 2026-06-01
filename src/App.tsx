@@ -2337,24 +2337,46 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
     scheduleSettingsSave({ notificationMessage: val });
   };
 
-  // Agenda notificação via Service Worker (funciona mesmo com app em background)
+  // Salva / atualiza subscription de push no Supabase (servidor envia notificação no horário certo)
   React.useEffect(() => {
-    if (!('serviceWorker' in navigator) || Notification.permission !== 'granted') return;
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    if (Notification.permission !== 'granted') return;
 
-    navigator.serviceWorker.ready.then((reg) => {
-      if (!reg.active) return;
-      if (notificationsEnabled) {
-        reg.active.postMessage({
-          type: 'SCHEDULE_NOTIFICATION',
-          time: notificationTime,
-          title: notificationTitle.trim() || 'Controle de Gastos',
-          body: notificationMessage.trim() || 'Você lembrou de anotar os seus gastos hoje?',
-        });
-      } else {
-        reg.active.postMessage({ type: 'CANCEL_NOTIFICATION' });
+    const title = notificationTitle.trim() || 'Controle de Gastos';
+    const message = notificationMessage.trim() || 'Você lembrou de anotar os seus gastos hoje?';
+
+    navigator.serviceWorker.ready.then(async (reg) => {
+      try {
+        // Converte a chave pública VAPID de base64url para Uint8Array
+        const vapidKey = db.VAPID_PUBLIC_KEY;
+        const padding = '='.repeat((4 - vapidKey.length % 4) % 4);
+        const base64 = (vapidKey + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawKey = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+
+        // Subscreve (ou reutiliza subscrição existente)
+        let sub = await reg.pushManager.getSubscription();
+        if (!sub) {
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: rawKey,
+          });
+        }
+
+        if (notificationsEnabled) {
+          await db.upsertPushSubscription(user.id, sub, {
+            time: notificationTime,
+            title,
+            message,
+            enabled: true,
+          });
+        } else {
+          await db.disablePushSubscription(user.id);
+        }
+      } catch (err) {
+        console.error('Erro ao registrar push subscription:', err);
       }
     });
-  }, [notificationsEnabled, notificationTime, notificationTitle, notificationMessage]);
+  }, [notificationsEnabled, notificationTime, notificationTitle, notificationMessage, user.id]);
 
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [expenseToEdit, setExpenseToEdit] = useState<Expense | null>(null);

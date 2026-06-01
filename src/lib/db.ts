@@ -238,6 +238,36 @@ export async function updateAppSettings(
   if (error) throw error;
 }
 
+// ─── Push Subscriptions ──────────────────────────────────────────────────────
+
+export const VAPID_PUBLIC_KEY = 'BFl-zEkt9AJn2_hmizIx2Z1h2iaNkKi1FuyO2KgZkH30UsX8rBK3bGn99912DdiqYLxN1bKkrL5ZiudDNVBPBG4';
+
+export async function upsertPushSubscription(
+  userId: string,
+  subscription: PushSubscription,
+  opts: { time: string; title: string; message: string; enabled: boolean }
+): Promise<void> {
+  const json = subscription.toJSON();
+  const utcOffsetMinutes = -(new Date().getTimezoneOffset()); // e.g. -180 para BRT
+  const { error } = await supabase.from('push_subscriptions').upsert({
+    user_id: userId,
+    endpoint: json.endpoint,
+    p256dh: json.keys?.p256dh,
+    auth: json.keys?.auth,
+    notification_time: opts.time,
+    notification_title: opts.title,
+    notification_message: opts.message,
+    utc_offset_minutes: utcOffsetMinutes,
+    enabled: opts.enabled,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id,endpoint' });
+  if (error) throw error;
+}
+
+export async function disablePushSubscription(userId: string): Promise<void> {
+  await supabase.from('push_subscriptions').update({ enabled: false }).eq('user_id', userId);
+}
+
 // ─── Storage ─────────────────────────────────────────────────────────────────
 
 export async function uploadReceipt(file: File, userId: string): Promise<string> {

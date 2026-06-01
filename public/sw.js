@@ -1,59 +1,32 @@
-const CACHE_NAME = 'controle-gastos-v2';
+const CACHE_NAME = 'controle-gastos-v3';
 
-// ─── Notification Scheduler ───────────────────────────────────────────────────
-let notifTimer = null;
-let notifConfig = {
-  time: null,
-  title: 'Controle de Gastos',
-  body: 'Você lembrou de anotar os seus gastos hoje?',
-};
+// ─── Push recebido do servidor (Web Push via Supabase Edge Function) ──────────
+self.addEventListener('push', (event) => {
+  let data = { title: 'Controle de Gastos', body: 'Você lembrou de anotar os seus gastos hoje?' };
+  try {
+    if (event.data) data = { ...data, ...JSON.parse(event.data.text()) };
+  } catch (_) {}
 
-function scheduleNextNotification() {
-  if (notifTimer) clearTimeout(notifTimer);
-  if (!notifConfig.time) return;
-
-  const [hours, minutes] = notifConfig.time.split(':').map(Number);
-  const now = new Date();
-  const target = new Date();
-  target.setHours(hours, minutes, 0, 0);
-
-  // Se o horário de hoje já passou, agenda para amanhã
-  if (target <= now) {
-    target.setDate(target.getDate() + 1);
-  }
-
-  const delay = target.getTime() - now.getTime();
-
-  notifTimer = setTimeout(() => {
-    self.registration.showNotification(notifConfig.title, {
-      body: notifConfig.body,
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
       icon: '/icon-192.png',
       badge: '/badge.svg',
       vibrate: [200, 100, 200],
       tag: 'remind-gastos',
-    });
-    // Agenda automaticamente para o dia seguinte
-    scheduleNextNotification();
-  }, delay);
-}
+    })
+  );
+});
 
-self.addEventListener('message', (event) => {
-  if (!event.data) return;
-
-  if (event.data.type === 'SCHEDULE_NOTIFICATION') {
-    notifConfig = {
-      time: event.data.time,
-      title: event.data.title || 'Controle de Gastos',
-      body: event.data.body || 'Você lembrou de anotar os seus gastos hoje?',
-    };
-    scheduleNextNotification();
-  }
-
-  if (event.data.type === 'CANCEL_NOTIFICATION') {
-    if (notifTimer) clearTimeout(notifTimer);
-    notifTimer = null;
-    notifConfig.time = null;
-  }
+// Clique na notificação abre o app
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      if (list.length > 0) return list[0].focus();
+      return clients.openWindow('/');
+    })
+  );
 });
 
 // ─── Install / Activate / Fetch (cache) ──────────────────────────────────────
