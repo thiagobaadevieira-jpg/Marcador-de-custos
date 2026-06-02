@@ -115,7 +115,7 @@ const CategorySettingsModal = ({
                           onChange={(e) => setTempEditName(e.target.value)}
                           onBlur={handleSaveEdit}
                           onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit()}
-                          className="bg-transparent outline-none font-bold text-sm text-white w-full"
+                          className="bg-transparent outline-none font-bold text-base text-white w-full"
                         />
                       ) : (
                         <span className="text-sm font-bold truncate">{cat.name}</span>
@@ -149,7 +149,7 @@ const CategorySettingsModal = ({
                   onChange={(e) => setNewCatName(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
                   placeholder="Nome da categoria..."
-                  className="flex-1 h-14 glass rounded-2xl px-5 outline-none focus:border-blue-500/50 transition-colors text-sm font-bold placeholder:text-white/5"
+                  className="flex-1 h-14 glass rounded-2xl px-5 outline-none focus:border-blue-500/50 transition-colors text-base font-bold placeholder:text-white/5"
                 />
                 <button 
                   onClick={handleAdd}
@@ -352,7 +352,7 @@ const NotificationSettingsModal = ({
                   onChange={(e) => onTitleChange(e.target.value)}
                   maxLength={50}
                   placeholder="Ex: Controle de Gastos"
-                  className="w-full h-12 glass rounded-2xl px-5 outline-none focus:border-blue-500/50 transition-colors text-sm font-bold placeholder:text-white/10"
+                  className="w-full h-12 glass rounded-2xl px-5 outline-none focus:border-blue-500/50 transition-colors text-base font-bold placeholder:text-white/10"
                 />
               </div>
 
@@ -364,7 +364,7 @@ const NotificationSettingsModal = ({
                   maxLength={150}
                   rows={3}
                   placeholder="Ex: Você lembrou de anotar seus gastos hoje?"
-                  className="w-full glass rounded-2xl px-5 py-3 outline-none focus:border-blue-500/50 transition-colors text-sm font-medium placeholder:text-white/10 resize-none"
+                  className="w-full glass rounded-2xl px-5 py-3 outline-none focus:border-blue-500/50 transition-colors text-base font-medium placeholder:text-white/10 resize-none"
                 />
                 <p className="text-[9px] text-white/20 text-right pr-1">{message.length}/150</p>
               </div>
@@ -1644,7 +1644,7 @@ const ProfileModal = ({ isOpen, onClose, user, email, onSaved }: ProfileModalPro
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Como aparece nos lançamentos"
-                  className="w-full h-14 glass rounded-2xl px-5 outline-none focus:border-blue-500/50 transition-colors text-sm font-bold placeholder:text-white/10"
+                  className="w-full h-14 glass rounded-2xl px-5 outline-none focus:border-blue-500/50 transition-colors text-base font-bold placeholder:text-white/10"
                 />
               </div>
 
@@ -1658,7 +1658,7 @@ const ProfileModal = ({ isOpen, onClose, user, email, onSaved }: ProfileModalPro
                   type="email"
                   value={email}
                   readOnly
-                  className="w-full h-14 bg-white/[0.02] border border-white/5 rounded-2xl px-5 outline-none text-sm font-medium text-white/40 cursor-not-allowed"
+                  className="w-full h-14 bg-white/[0.02] border border-white/5 rounded-2xl px-5 outline-none text-base font-medium text-white/40 cursor-not-allowed"
                 />
                 <p className="text-[10px] text-white/30 leading-relaxed px-1">
                   Para alterar o e-mail, peça ao administrador do sistema.
@@ -1944,7 +1944,7 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   placeholder="Detalhes que ajudam no fechamento..."
-                  className="w-full h-32 glass rounded-3xl p-6 outline-none focus:border-blue-500/50 transition-colors resize-none placeholder:text-white/5 font-medium"
+                  className="w-full h-32 glass rounded-3xl p-6 outline-none focus:border-blue-500/50 transition-colors resize-none placeholder:text-white/5 font-medium text-base"
                 />
               </div>
 
@@ -2928,8 +2928,8 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                           }
                         }
                       }}
-                      placeholder="Procurar custo específico..." 
-                      className="bg-transparent outline-none flex-1 text-sm font-medium placeholder:text-white/10" 
+                      placeholder="Procurar custo específico..."
+                      className="bg-transparent outline-none flex-1 text-base font-medium placeholder:text-white/10"
                     />
                     {searchQuery && (
                       <button 
