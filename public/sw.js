@@ -1,4 +1,14 @@
-const CACHE_NAME = 'controle-gastos-v4';
+const CACHE_NAME = 'controle-gastos-v5';
+
+// Extrai os caminhos /assets/*.js|css do HTML e cacheia (nomes têm hash do build)
+async function cacheShellAssets(cache, html) {
+  const assets = [...html.matchAll(/(?:src|href)="(\/assets\/[^"]+)"/g)].map((m) => m[1]);
+  await Promise.all(
+    [...new Set(assets)].map((url) =>
+      cache.match(url).then((hit) => (hit ? null : cache.add(url).catch(() => {})))
+    )
+  );
+}
 
 // ─── Push recebido do servidor (Web Push via Supabase Edge Function) ──────────
 self.addEventListener('push', (event) => {
@@ -32,9 +42,17 @@ self.addEventListener('notificationclick', (event) => {
 // ─── Install / Activate / Fetch (cache) ──────────────────────────────────────
 
 self.addEventListener('install', (event) => {
-  // Pré-cacheia o app shell para o app abrir sem internet
+  // Pré-cacheia o app shell COMPLETO (HTML + JS/CSS com hash) para abrir offline.
+  // Sem os assets, o HTML cacheado carrega mas a tela fica branca.
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(['/']))
+    (async () => {
+      const cache = await caches.open(CACHE_NAME);
+      const res = await fetch('/');
+      if (res && res.status === 200) {
+        await cache.put('/', res.clone());
+        await cacheShellAssets(cache, await res.text());
+      }
+    })().catch(() => {}) // rede instável não pode impedir a instalação
   );
   self.skipWaiting();
 });
@@ -52,13 +70,16 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET' || !request.url.startsWith(self.location.origin)) return;
   if (request.mode === 'navigate' || request.url.endsWith('.html')) {
-    // Network-first; sucesso atualiza o cache do shell, falha cai no cache
+    // Network-first; sucesso atualiza HTML + assets no cache, falha cai no cache
     event.respondWith(
       fetch(request)
         .then((response) => {
           if (response && response.status === 200) {
             const toCache = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put('/', toCache));
+            caches.open(CACHE_NAME).then(async (cache) => {
+              await cache.put('/', toCache.clone());
+              cacheShellAssets(cache, await toCache.text()).catch(() => {});
+            });
           }
           return response;
         })
@@ -73,7 +94,7 @@ self.addEventListener('fetch', (event) => {
         if (!response || response.status !== 200 || response.type === 'opaque') return response;
         caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone()));
         return response;
-      }).catch(() => {});
+      }).catch(() => Response.error());
     })
   );
 });
