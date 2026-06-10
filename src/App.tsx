@@ -2586,6 +2586,12 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
     return result;
   }, [expenses, debouncedSearch, selectedCategoryFilter, selectedMonthFilter, sortOrder]);
 
+  // Soma dos resultados filtrados (exibida na barra de total da busca)
+  const searchTotal = useMemo(
+    () => filteredAndSortedExpenses.reduce((sum, e) => sum + e.value, 0),
+    [filteredAndSortedExpenses]
+  );
+
   // O(1) lookup maps — evita scan linear em cada render para cada linha da lista
   const usersById = useMemo(() => {
     const m = new Map<string, User>();
@@ -2993,6 +2999,18 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
                     </button>
                   )}
                 </div>
+
+                {/* Total dos resultados da busca */}
+                {debouncedSearch.trim() !== "" && filteredAndSortedExpenses.length > 0 && (
+                  <div className="flex items-center justify-between px-5 py-3 glass rounded-2xl">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-white/40">
+                      {filteredAndSortedExpenses.length} {filteredAndSortedExpenses.length === 1 ? 'lançamento' : 'lançamentos'}
+                    </span>
+                    <span className="text-base font-black text-white">
+                      {formatCurrency(searchTotal)}
+                    </span>
+                  </div>
+                )}
 
                 {/* Active Filters Bar */}
                 {!searchQuery && (selectedCategoryFilter !== "all" || sortOrder !== "none" || (selectedMonthFilter !== "all" && selectedMonthFilter !== currentYearMonth)) && (
