@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "@/src/lib/motion-stub";
-import { DollarSign, Bell, Plus, LayoutDashboard, List, LogOut, Search, Filter, Camera, X, ChevronDown, Settings, Trash2, Menu, Edit2, AlertCircle, Download, Paperclip, User as UserIcon, Check } from "lucide-react";
+import { DollarSign, Bell, Plus, LayoutDashboard, List, LogOut, Search, Filter, Camera, X, ChevronDown, Settings, Trash2, Menu, Edit2, AlertCircle, Download, Paperclip, User as UserIcon, Check, Sun, Moon } from "lucide-react";
 import { cn, formatCurrency } from "@/src/lib/utils";
 import { User, Expense } from "@/src/types";
 import { supabase } from "@/src/lib/supabase";
@@ -83,7 +83,7 @@ const CategorySettingsModal = ({
         className="fixed inset-0 bg-slate-950/50 backdrop-blur-md z-[200]"
       />
       <div
-        className="fixed inset-4 m-auto max-w-sm h-fit max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none bg-[#161929]/90 backdrop-blur-xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)]"
+        className="fixed inset-4 m-auto max-w-sm h-fit max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none surface-modal backdrop-blur-xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10"
       >
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-2xl font-black tracking-tight">Categorias</h2>
@@ -320,7 +320,7 @@ const NotificationSettingsModal = ({
             className="fixed inset-0 bg-slate-950/50 backdrop-blur-md z-[200]"
           />
           <div
-            className="fixed inset-4 m-auto max-w-sm h-fit max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none bg-[#161929]/90 backdrop-blur-xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)]"
+            className="fixed inset-4 m-auto max-w-sm h-fit max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none surface-modal backdrop-blur-xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10"
           >
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-black tracking-tight text-white">Lembretes</h2>
@@ -410,7 +410,7 @@ const NotificationSettingsModal = ({
 
                         {activeDropdown === 'hour' && (
                             <div
-                              className="absolute top-full left-0 right-0 mt-2 max-h-48 overflow-y-auto bg-[#181b2c]/95 backdrop-blur-lg border border-white/10 rounded-2xl shadow-2xl z-[250] py-1 scrollbar-none"
+                              className="absolute top-full left-0 right-0 mt-2 max-h-48 overflow-y-auto surface-dropdown backdrop-blur-lg border border-white/10 rounded-2xl shadow-2xl z-[250] py-1 scrollbar-none"
                             >
                               {hoursArray.map(h => (
                                 <button
@@ -450,7 +450,7 @@ const NotificationSettingsModal = ({
 
                         {activeDropdown === 'minute' && (
                             <div
-                              className="absolute top-full left-0 right-0 mt-2 max-h-48 overflow-y-auto bg-[#181b2c]/95 backdrop-blur-lg border border-white/10 rounded-2xl shadow-2xl z-[250] py-1 scrollbar-none"
+                              className="absolute top-full left-0 right-0 mt-2 max-h-48 overflow-y-auto surface-dropdown backdrop-blur-lg border border-white/10 rounded-2xl shadow-2xl z-[250] py-1 scrollbar-none"
                             >
                               {minutesArray.map(m => (
                                 <button
@@ -1270,7 +1270,7 @@ const ExportModal = ({ isOpen, onClose, expenses, categories, users }: ExportMod
             className="fixed inset-0 bg-slate-950/50 backdrop-blur-md z-[200]"
           />
           <div
-            className="fixed inset-4 m-auto max-w-md h-fit max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none bg-[#161929]/90 backdrop-blur-xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)]"
+            className="fixed inset-4 m-auto max-w-md h-fit max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none surface-modal backdrop-blur-xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10"
           >
             <div className="flex justify-between items-center mb-8">
               <div className="flex items-center gap-3">
@@ -1340,7 +1340,7 @@ const ExportModal = ({ isOpen, onClose, expenses, categories, users }: ExportMod
 
                       {isDropdownOpen && (
                           <div
-                            className="absolute left-0 right-0 mt-2 bg-[#12141c]/95 backdrop-blur-lg border border-white/10 rounded-2xl p-2 shadow-2xl z-[215] max-h-48 overflow-y-auto scrollbar-none select-none"
+                            className="absolute left-0 right-0 mt-2 surface-dropdown backdrop-blur-lg border border-white/10 rounded-2xl p-2 shadow-2xl z-[215] max-h-48 overflow-y-auto scrollbar-none select-none"
                           >
                             {availableMonths.map(month => (
                               <button
@@ -1570,7 +1570,7 @@ const ProfileModal = ({ isOpen, onClose, user, email, onSaved }: ProfileModalPro
             className="fixed inset-0 bg-slate-950/50 backdrop-blur-md z-[200]"
           />
           <div
-            className="fixed inset-4 m-auto max-w-sm h-fit max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none bg-[#161929]/90 backdrop-blur-xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)]"
+            className="fixed inset-4 m-auto max-w-sm h-fit max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none surface-modal backdrop-blur-xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10"
           >
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-2xl font-black tracking-tight">Meu Perfil</h2>
@@ -1884,7 +1884,7 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
-                      className="absolute top-full left-0 right-0 mt-2 p-3 bg-[#1a1a2e] border border-white/20 rounded-[28px] z-[120] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.6)] backdrop-blur-3xl"
+                      className="absolute top-full left-0 right-0 mt-2 p-3 surface-dropdown border border-white/20 rounded-[28px] z-[120] backdrop-blur-3xl"
                     >
                       <div className="max-h-64 overflow-y-auto space-y-1 pr-2">
                         {categories.map(cat => (
@@ -1934,7 +1934,6 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
                   max={todayISO}
                   onChange={(e) => setExpenseDate(e.target.value)}
                   className="w-full h-16 glass rounded-2xl px-6 text-base font-bold outline-none focus:border-blue-500/50 transition-colors"
-                  style={{ colorScheme: 'dark' }}
                 />
               </div>
 
@@ -2063,7 +2062,7 @@ const ExpenseDetailModal = ({ isOpen, onClose, expense, onEdit, onDelete, catego
             initial={{ scale: 0.95, opacity: 0, y: 15 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 15 }}
-            className="fixed inset-4 m-auto max-w-sm h-fit bg-[#161929]/95 backdrop-blur-lg rounded-[40px] p-8 sm:p-10 z-[201] flex flex-col items-center text-center border border-white/10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)]"
+            className="fixed inset-4 m-auto max-w-sm h-fit surface-modal backdrop-blur-lg rounded-[40px] p-8 sm:p-10 z-[201] flex flex-col items-center text-center border border-white/10"
           >
             <button 
               onClick={onClose} 
@@ -2265,7 +2264,7 @@ const ptBRMonths = [
   { value: "11", label: "Dezembro" }
 ];
 
-const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLogout: () => void, onProfileUpdate: (u: User) => void }) => {
+const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme }: { user: User, onLogout: () => void, onProfileUpdate: (u: User) => void, theme: 'dark' | 'light', onToggleTheme: () => void }) => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [users, setUsers] = useState<User[]>([user]);
@@ -2723,7 +2722,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
           </button>
 
           {isMenuOpen && (
-            <div className="absolute top-full right-0 mt-3 w-56 bg-[#161929]/95 backdrop-blur-lg border border-white/10 rounded-2xl shadow-2xl p-2 z-[90] overflow-hidden">
+            <div className="absolute top-full right-0 mt-3 w-56 surface-modal backdrop-blur-lg border border-white/10 rounded-2xl shadow-2xl p-2 z-[90] overflow-hidden">
                 <button
                   onClick={() => {
                     setIsProfileOpen(true);
@@ -2770,6 +2769,17 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                 >
                   <Bell className="w-4 h-4" />
                   <span>Notificações</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    onToggleTheme();
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl text-sm font-bold text-white/60 text-left"
+                >
+                  {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                  <span>{theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}</span>
                 </button>
 
                 <button
@@ -3013,7 +3023,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="p-5 bg-[#161929]/50 border border-white/5 rounded-[24px] backdrop-blur-xl"
+                    className="p-5 surface-dropdown border border-white/5 rounded-[24px] backdrop-blur-xl"
                   >
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       {/* Category Filter */}
@@ -3052,7 +3062,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                                 <motion.div
                                   initial={{ opacity: 0, y: 5, scale: 0.98 }}
                                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                                  className="absolute left-0 right-0 mt-1.5 p-1.5 bg-[#1a1e33] border border-white/10 rounded-2xl shadow-2xl z-20 max-h-56 overflow-y-auto scrollbar-none flex flex-col gap-0.5"
+                                  className="absolute left-0 right-0 mt-1.5 p-1.5 surface-dropdown border border-white/10 rounded-2xl shadow-2xl z-20 max-h-56 overflow-y-auto scrollbar-none flex flex-col gap-0.5"
                                 >
                                   <button
                                     type="button"
@@ -3118,7 +3128,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                               <motion.div
                                 initial={{ opacity: 0, y: 5, scale: 0.98 }}
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                                className="absolute left-0 right-0 mt-1.5 p-1.5 bg-[#1a1e33] border border-white/10 rounded-2xl shadow-2xl z-20 max-h-56 overflow-y-auto scrollbar-none flex flex-col gap-0.5"
+                                className="absolute left-0 right-0 mt-1.5 p-1.5 surface-dropdown border border-white/10 rounded-2xl shadow-2xl z-20 max-h-56 overflow-y-auto scrollbar-none flex flex-col gap-0.5"
                               >
                                 <button
                                   type="button"
@@ -3184,7 +3194,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
                               <motion.div
                                 initial={{ opacity: 0, y: 5, scale: 0.98 }}
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                                className="absolute left-0 right-0 mt-1.5 p-1.5 bg-[#1a1e33] border border-white/10 rounded-2xl shadow-2xl z-20 flex flex-col gap-0.5"
+                                className="absolute left-0 right-0 mt-1.5 p-1.5 surface-dropdown border border-white/10 rounded-2xl shadow-2xl z-20 flex flex-col gap-0.5"
                               >
                                 <button
                                   type="button"
@@ -3387,6 +3397,20 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate }: { user: User, onLo
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [theme, setTheme] = useState<'dark' | 'light'>(() =>
+    localStorage.getItem('theme') === 'light' ? 'light' : 'dark'
+  );
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('light', theme === 'light');
+    localStorage.setItem('theme', theme);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', theme === 'light' ? '#f1f5f9' : '#090a0f');
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme(t => (t === 'light' ? 'dark' : 'light'));
+  }, []);
 
   async function loadUserProfile(userId: string, sessionEmail: string = ''): Promise<User> {
     const profile = await db.getUserProfile(userId);
@@ -3460,7 +3484,7 @@ export default function App() {
           </motion.div>
         ) : (
           <motion.div key="app" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <DashboardScreen user={currentUser} onLogout={() => supabase.auth.signOut()} onProfileUpdate={setCurrentUser} />
+            <DashboardScreen user={currentUser} onLogout={() => supabase.auth.signOut()} onProfileUpdate={setCurrentUser} theme={theme} onToggleTheme={toggleTheme} />
           </motion.div>
         )}
       </AnimatePresence>

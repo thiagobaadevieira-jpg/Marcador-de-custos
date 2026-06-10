@@ -20,6 +20,34 @@
     overscroll-behavior-x: none;
   }
 
+  input, textarea, select {
+    color-scheme: dark;
+  }
+
+  /* ─── Modo claro ───────────────────────────────────────────────────────── */
+  html.light {
+    /* Inverte todas as utilities text-white/x, bg-white/x, border-white/x */
+    --color-white: #1e293b;
+  }
+
+  html.light body {
+    background: radial-gradient(circle at top left, #ffffff, #f1f5f9, #e2e8f0);
+    background-color: #f1f5f9;
+  }
+
+  html.light input,
+  html.light textarea,
+  html.light select {
+    color-scheme: light;
+  }
+
+  html.light ::-webkit-scrollbar-thumb {
+    background: rgba(30, 41, 59, 0.15);
+  }
+  html.light ::-webkit-scrollbar-thumb:hover {
+    background: rgba(30, 41, 59, 0.25);
+  }
+
   /* Apple-style thin scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
@@ -71,5 +99,39 @@
 
   .btn-gradient {
     @apply bg-gradient-to-r from-blue-600 to-indigo-600 shadow-2xl shadow-blue-600/20 hover:brightness-110 transition-all active:scale-95;
+  }
+
+  /* Surfaces sólidos (modais e dropdowns) — antes eram hex fixos no JSX */
+  .surface-modal {
+    background: rgba(22, 25, 41, 0.9);
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7);
+  }
+
+  .surface-dropdown {
+    background: rgba(24, 27, 44, 0.97);
+    box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.6);
+  }
+
+  /* ─── Overrides do modo claro ──────────────────────────────────────────── */
+  html.light .glass,
+  html.light .glass-card,
+  html.light .interactive-glass {
+    background: rgba(255, 255, 255, 0.75);
+    border-color: rgba(30, 41, 59, 0.1);
+  }
+
+  html.light .interactive-glass:hover {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(30, 41, 59, 0.18);
+  }
+
+  html.light .surface-modal {
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.25);
+  }
+
+  html.light .surface-dropdown {
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 20px 40px -12px rgba(15, 23, 42, 0.2);
   }
 }
