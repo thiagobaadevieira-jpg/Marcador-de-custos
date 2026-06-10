@@ -35,6 +35,29 @@ const GlassCard = ({ children, className, delay = 0 }: GlassCardProps) => (
   </motion.div>
 );
 
+// Trava o scroll do body enquanto um modal está aberto.
+// position:fixed é a única técnica confiável no iOS Safari — overflow:hidden não basta.
+const useLockBodyScroll = (locked: boolean) => {
+  useEffect(() => {
+    if (!locked) return;
+    const scrollY = window.scrollY;
+    const { style } = document.body;
+    style.position = 'fixed';
+    style.top = `-${scrollY}px`;
+    style.left = '0';
+    style.right = '0';
+    style.overflow = 'hidden';
+    return () => {
+      style.position = '';
+      style.top = '';
+      style.left = '';
+      style.right = '';
+      style.overflow = '';
+      window.scrollTo(0, scrollY);
+    };
+  }, [locked]);
+};
+
 // --- Category Settings Modal ---
 
 const CategorySettingsModal = ({
@@ -56,6 +79,8 @@ const CategorySettingsModal = ({
   const [editingCatName, setEditingCatName] = useState<string | null>(null);
   const [tempEditName, setTempEditName] = useState("");
   const [catToDelete, setCatToDelete] = useState<string | null>(null);
+
+  useLockBodyScroll(isOpen);
 
   if (!isOpen) return null;
 
@@ -84,7 +109,7 @@ const CategorySettingsModal = ({
         className="fixed inset-0 bg-slate-950/50 backdrop-blur-md z-[200]"
       />
       <div
-        className="fixed inset-4 m-auto max-w-sm h-fit max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none surface-modal backdrop-blur-xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10"
+        className="fixed inset-4 m-auto max-w-sm h-fit max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain scrollbar-none surface-modal backdrop-blur-xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10"
       >
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-2xl font-black tracking-tight">Categorias</h2>
@@ -230,6 +255,8 @@ const NotificationSettingsModal = ({
     };
   }, [activeDropdown]);
 
+  useLockBodyScroll(isOpen);
+
   if (!isOpen) return null;
 
   // Envia notificação via Service Worker (funciona no mobile) com fallback para desktop
@@ -321,7 +348,7 @@ const NotificationSettingsModal = ({
             className="fixed inset-0 bg-slate-950/50 backdrop-blur-md z-[200]"
           />
           <div
-            className="fixed inset-4 m-auto max-w-sm h-fit max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none surface-modal backdrop-blur-xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10"
+            className="fixed inset-4 m-auto max-w-sm h-fit max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain scrollbar-none surface-modal backdrop-blur-xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10"
           >
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-black tracking-tight text-white">Lembretes</h2>
@@ -607,6 +634,8 @@ const ExportModal = ({ isOpen, onClose, expenses, categories, users }: ExportMod
   }, [filteredExportExpenses, categories]);
 
   const exportTotalAmount = useMemo(() => exportStats.reduce((sum, s) => sum + s.total, 0), [exportStats]);
+
+  useLockBodyScroll(isOpen);
 
   if (!isOpen) return null;
 
@@ -1271,7 +1300,7 @@ const ExportModal = ({ isOpen, onClose, expenses, categories, users }: ExportMod
             className="fixed inset-0 bg-slate-950/50 backdrop-blur-md z-[200]"
           />
           <div
-            className="fixed inset-4 m-auto max-w-md h-fit max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none surface-modal backdrop-blur-xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10"
+            className="fixed inset-4 m-auto max-w-md h-fit max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain scrollbar-none surface-modal backdrop-blur-xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10"
           >
             <div className="flex justify-between items-center mb-8">
               <div className="flex items-center gap-3">
@@ -1444,6 +1473,8 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }: {
   title: string,
   message: string
 }) => {
+  useLockBodyScroll(isOpen);
+
   if (!isOpen) return null;
 
   return (
@@ -1505,6 +1536,8 @@ const ProfileModal = ({ isOpen, onClose, user, email, onSaved }: ProfileModalPro
       setError(null);
     }
   }, [isOpen, user]);
+
+  useLockBodyScroll(isOpen);
 
   if (!isOpen) return null;
 
@@ -1571,7 +1604,7 @@ const ProfileModal = ({ isOpen, onClose, user, email, onSaved }: ProfileModalPro
             className="fixed inset-0 bg-slate-950/50 backdrop-blur-md z-[200]"
           />
           <div
-            className="fixed inset-4 m-auto max-w-sm h-fit max-h-[calc(100vh-2rem)] overflow-y-auto scrollbar-none surface-modal backdrop-blur-xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10"
+            className="fixed inset-4 m-auto max-w-sm h-fit max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain scrollbar-none surface-modal backdrop-blur-xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 z-[201] border border-white/10"
           >
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-2xl font-black tracking-tight">Meu Perfil</h2>
@@ -1859,6 +1892,8 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
     onClose();
   };
 
+  useLockBodyScroll(isOpen);
+
   if (!isOpen) return null;
 
   return (
@@ -1868,7 +1903,7 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
         className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100]"
       />
       <div
-        className="fixed bottom-0 left-0 right-0 glass rounded-t-[48px] p-10 z-[101] max-h-[92vh] overflow-y-auto border-t border-white/10"
+        className="fixed bottom-0 left-0 right-0 glass rounded-t-[48px] p-10 z-[101] max-h-[92vh] overflow-y-auto overscroll-contain border-t border-white/10"
       >
             <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-10" />
             
@@ -2092,6 +2127,8 @@ const ExpenseDetailModal = ({ isOpen, onClose, expense, onEdit, onDelete, catego
       setIsImageViewerOpen(false);
     }
   }, [isOpen]);
+
+  useLockBodyScroll(isOpen && !!expense);
 
   if (!expense) return null;
   const owner = users.find(u => u.id === expense.userId);
