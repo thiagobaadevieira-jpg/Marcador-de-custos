@@ -1,4 +1,4 @@
-const CACHE_NAME = 'controle-gastos-v3';
+const CACHE_NAME = 'controle-gastos-v4';
 
 // ─── Push recebido do servidor (Web Push via Supabase Edge Function) ──────────
 self.addEventListener('push', (event) => {
@@ -31,7 +31,11 @@ self.addEventListener('notificationclick', (event) => {
 
 // ─── Install / Activate / Fetch (cache) ──────────────────────────────────────
 
-self.addEventListener('install', () => {
+self.addEventListener('install', (event) => {
+  // Pré-cacheia o app shell para o app abrir sem internet
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(['/']))
+  );
   self.skipWaiting();
 });
 
@@ -48,7 +52,18 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET' || !request.url.startsWith(self.location.origin)) return;
   if (request.mode === 'navigate' || request.url.endsWith('.html')) {
-    event.respondWith(fetch(request).catch(() => caches.match('/')));
+    // Network-first; sucesso atualiza o cache do shell, falha cai no cache
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const toCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put('/', toCache));
+          }
+          return response;
+        })
+        .catch(() => caches.match('/'))
+    );
     return;
   }
   event.respondWith(

@@ -6,6 +6,7 @@ import { User, Expense } from "@/src/types";
 import { supabase } from "@/src/lib/supabase";
 import * as db from "@/src/lib/db";
 import type { Category } from "@/src/lib/db";
+import { queueExpense, flushQueue, saveSnapshot, loadSnapshot, getQueuedAsExpenses } from "@/src/lib/offline";
 
 const INITIAL_CATEGORIES: Category[] = [
   { name: "Alimentação", color: "#f87171", initials: "AL" },
@@ -1763,7 +1764,7 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
   onClose: () => void,
   user: User,
   expense?: Expense | null,
-  onSave: (expense: Omit<Expense, 'id' | 'userId' | 'createdAt'> & { id?: string }) => void,
+  onSave: (expense: Omit<Expense, 'id' | 'userId' | 'createdAt'> & { id?: string, photoBlob?: File | null }) => void,
   categories: Category[]
 }) => {
   const todayISO = new Date().toISOString().slice(0, 10);
@@ -1791,6 +1792,7 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
       setAttachmentUrl(expense.attachmentUrl || "");
       setExpenseDate(expense.expenseDate || todayISO);
       setFormError(null);
+      setPendingPhoto(null);
     } else if (isOpen) {
       setName("");
       setValue("");
@@ -1799,19 +1801,33 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
       setAttachmentUrl("");
       setExpenseDate(todayISO);
       setFormError(null);
+      setPendingPhoto(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expense, isOpen]);
 
+  const [pendingPhoto, setPendingPhoto] = useState<File | null>(null);
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Offline: guarda o arquivo localmente — sobe junto com a sincronização
+    if (!navigator.onLine) {
+      setPendingPhoto(file);
+      setAttachmentUrl(URL.createObjectURL(file));
+      return;
+    }
+
     setUploadingFile(true);
     try {
       const url = await db.uploadReceipt(file, user.id);
       setAttachmentUrl(url);
+      setPendingPhoto(null);
     } catch {
-      alert('Erro ao enviar comprovante. Tente novamente.');
+      // Falha de rede no meio do upload: trata como offline
+      setPendingPhoto(file);
+      setAttachmentUrl(URL.createObjectURL(file));
     } finally {
       setUploadingFile(false);
     }
@@ -1835,8 +1851,10 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
       value: parseFloat(value),
       note,
       category,
-      attachmentUrl,
+      // blob: URL é só preview local — a URL real vem após sincronizar a foto
+      attachmentUrl: attachmentUrl.startsWith('blob:') ? '' : attachmentUrl,
       expenseDate,
+      photoBlob: pendingPhoto,
     });
     onClose();
   };
@@ -1990,7 +2008,7 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
                     </div>
                     <button 
                       type="button"
-                      onClick={() => setAttachmentUrl("")}
+                      onClick={() => { setAttachmentUrl(""); setPendingPhoto(null); }}
                       className="p-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/10 rounded-2xl active:scale-95 transition-all text-xs font-bold flex items-center justify-center gap-1 cursor-pointer"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -2251,6 +2269,11 @@ const ExpenseRow = memo(({ expense, categoryColor, ownerName, idx, pageSize, onS
         <div className="flex items-center justify-between gap-4 mb-1">
           <h4 className="font-bold text-sm leading-tight truncate group-hover:text-blue-400 transition-colors">{expense.name}</h4>
           <div className="flex items-center gap-2.5 shrink-0">
+            {expense.pending && (
+              <span className="text-[8px] font-black uppercase tracking-widest text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                Pendente
+              </span>
+            )}
             {expense.attachmentUrl && <Paperclip className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
             <p className="font-bold text-sm tracking-tight">{formatCurrency(expense.value)}</p>
           </div>
@@ -2305,16 +2328,25 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
   const loadData = () => {
     setDataLoading(true);
     setDataError(null);
-    Promise.all([db.getExpenses(), db.getCategories(), db.getUsers(), db.getAppSettings()])
-      .then(([exps, cats, usrs, settings]) => {
-        setExpenses(exps);
+    Promise.all([db.getExpenses(), db.getCategories(), db.getUsers(), db.getAppSettings(), getQueuedAsExpenses()])
+      .then(([exps, cats, usrs, settings, queued]) => {
+        setExpenses([...queued, ...exps]);
         setCategories(cats);
         setUsers(usrs.length ? usrs : [user]);
         setNotificationTitle(settings.notificationTitle);
         setNotificationMessage(settings.notificationMessage);
+        saveSnapshot(exps, cats, usrs.length ? usrs : [user]);
       })
       .catch((err) => {
         console.error(err);
+        // Sem rede: usa o último snapshot salvo em vez da tela de erro
+        const snap = loadSnapshot();
+        if (snap) {
+          setExpenses(snap.expenses);
+          setCategories(snap.categories);
+          setUsers(snap.users.length ? snap.users : [user]);
+          return;
+        }
         setDataError('Não foi possível carregar os dados. Verifique sua conexão.');
       })
       .finally(() => setDataLoading(false));
@@ -2413,6 +2445,33 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
   const [view, setView] = useState<'overview' | 'list'>('overview');
 
+  // Conexão: banner offline + sincronização da fila quando a rede volta
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  useEffect(() => {
+    const goOnline = () => setIsOnline(true);
+    const goOffline = () => setIsOnline(false);
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+    return () => {
+      window.removeEventListener('online', goOnline);
+      window.removeEventListener('offline', goOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isOnline) return;
+    flushQueue(user.id)
+      .then((synced) => {
+        if (synced > 0) {
+          // Troca os itens offline pelos registros reais do servidor
+          Promise.all([db.getExpenses(), getQueuedAsExpenses()])
+            .then(([fresh, queued]) => setExpenses([...queued, ...fresh]))
+            .catch(() => {});
+        }
+      })
+      .catch(() => {});
+  }, [isOnline, user.id]);
+
   // Esconde header ao rolar para baixo, só volta quando chega no topo
   const [headerVisible, setHeaderVisible] = useState(true);
   useEffect(() => {
@@ -2425,31 +2484,70 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Atualiza lançamentos silenciosamente ao entrar na aba (sem spinner)
+  // Atualiza lançamentos silenciosamente ao entrar na aba (sem spinner),
+  // mesclando os pendentes da fila offline
   useEffect(() => {
     if (view === 'list') {
-      db.getExpenses().then(setExpenses).catch(() => {});
+      Promise.all([db.getExpenses(), getQueuedAsExpenses()])
+        .then(([fresh, queued]) => setExpenses([...queued, ...fresh]))
+        .catch(() => {});
     }
   }, [view]);
 
   const handleEdit = (expense: Expense) => {
+    if (!navigator.onLine || expense.pending || expense.id.startsWith('offline-')) {
+      alert('Edição disponível quando a conexão voltar.');
+      return;
+    }
     setExpenseToEdit(expense);
     setSelectedExpense(null);
     setIsModalOpen(true);
   };
 
   const handleDelete = (expense: Expense) => {
+    if (!navigator.onLine || expense.pending || expense.id.startsWith('offline-')) {
+      alert('Exclusão disponível quando a conexão voltar.');
+      return;
+    }
     setExpenseToDelete(expense);
   };
 
-  const handleSaveExpense = useCallback(async (newExpenseData: Omit<Expense, 'id' | 'userId' | 'createdAt'> & { id?: string }) => {
-    if (newExpenseData.id) {
-      const { id, ...updates } = newExpenseData;
+  const handleSaveExpense = useCallback(async (newExpenseData: Omit<Expense, 'id' | 'userId' | 'createdAt'> & { id?: string, photoBlob?: File | null }) => {
+    const { photoBlob, ...expenseData } = newExpenseData;
+
+    if (expenseData.id) {
+      const { id, ...updates } = expenseData;
       await db.updateExpense(id!, updates);
       setExpenses(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
-    } else {
-      const created = await db.createExpense({ ...newExpenseData, userId: user.id });
+      return;
+    }
+
+    const enqueue = async () => {
+      const { attachmentUrl: _drop, ...rest } = expenseData;
+      const tempId = await queueExpense({ ...rest, userId: user.id }, photoBlob ?? null);
+      const local: Expense = {
+        ...rest,
+        id: tempId,
+        userId: user.id,
+        createdAt: new Date().toISOString(),
+        attachmentUrl: undefined,
+        pending: true,
+      };
+      setExpenses(prev => [local, ...prev]);
+    };
+
+    if (!navigator.onLine || photoBlob) {
+      // Offline (ou foto pendente de upload) → entra na fila de sincronização
+      await enqueue();
+      return;
+    }
+
+    try {
+      const created = await db.createExpense({ ...expenseData, userId: user.id });
       setExpenses(prev => [created, ...prev]);
+    } catch {
+      // Falha de rede no salvar → não perde o lançamento, vai para a fila
+      await enqueue();
     }
   }, [user.id]);
 
@@ -2830,6 +2928,14 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
           )}
         </div>
       </header>
+
+      {!isOnline && (
+        <div className="fixed top-0 inset-x-0 z-[85] mt-[72px] bg-amber-500/15 border-b border-amber-500/20 backdrop-blur-lg px-6 py-2 text-center">
+          <p className="text-[10px] font-black uppercase tracking-widest text-amber-400">
+            Sem conexão — lançamentos serão sincronizados depois
+          </p>
+        </div>
+      )}
 
       <div className="max-w-2xl mx-auto px-6 pt-28">
         {/* View Switcher Refined */}

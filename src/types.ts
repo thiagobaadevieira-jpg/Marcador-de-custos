@@ -18,6 +18,7 @@ export interface Expense {
   attachmentUrl?: string;
   createdAt: string;
   expenseDate: string; // data real do gasto (YYYY-MM-DD)
+  pending?: boolean; // aguardando sincronização offline (apenas client-side)
 }
 
 export interface UserStats {
