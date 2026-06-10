@@ -1776,6 +1776,7 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
   const [attachmentUrl, setAttachmentUrl] = useState(expense?.attachmentUrl || "");
 
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -1789,6 +1790,7 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
       setCategory(expense.category);
       setAttachmentUrl(expense.attachmentUrl || "");
       setExpenseDate(expense.expenseDate || todayISO);
+      setFormError(null);
     } else if (isOpen) {
       setName("");
       setValue("");
@@ -1796,6 +1798,7 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
       setCategory(categories[0]?.name || "");
       setAttachmentUrl("");
       setExpenseDate(todayISO);
+      setFormError(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expense, isOpen]);
@@ -1817,7 +1820,15 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
   const selectedCategory = categories.find(c => c.name === category) || categories[0] || { name: 'Outros', color: '#94a3b8' };
 
   const handleSave = () => {
-    if (!name || !value) return;
+    if (!name.trim() || !value) {
+      setFormError(
+        !name.trim() && !value ? 'Preencha a descrição e o valor.'
+        : !name.trim() ? 'Preencha a descrição do gasto.'
+        : 'Preencha o valor do gasto.'
+      );
+      return;
+    }
+    if (uploadingFile) return;
     onSave({
       id: expense?.id,
       name,
@@ -1853,13 +1864,19 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
             <div className="space-y-8">
               <div className="space-y-3">
                 <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Descrição</label>
-                <input 
+                <input
                   autoFocus
-                  type="text" 
+                  type="text"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    if (formError) setFormError(null);
+                  }}
                   placeholder="Descreva o nome do gasto..."
-                  className="w-full h-16 glass rounded-2xl px-6 text-xl outline-none focus:border-blue-500/50 transition-colors placeholder:text-white/5 font-bold"
+                  className={cn(
+                    "w-full h-16 glass rounded-2xl px-6 text-xl outline-none focus:border-blue-500/50 transition-colors placeholder:text-white/5 font-bold",
+                    formError && !name.trim() && "border-red-500/50"
+                  )}
                 />
               </div>
 
@@ -1916,12 +1933,18 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
                 <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Valor Unitário</label>
                 <div className="relative">
                    <span className="absolute left-6 top-1/2 -translate-y-1/2 text-white/20 font-bold text-xl">R$</span>
-                   <input 
-                    type="number" 
+                   <input
+                    type="number"
                     value={value}
-                    onChange={(e) => setValue(e.target.value)}
+                    onChange={(e) => {
+                      setValue(e.target.value);
+                      if (formError) setFormError(null);
+                    }}
                     placeholder="0,00"
-                    className="w-full h-16 glass rounded-2xl pl-16 pr-6 text-3xl font-black outline-none focus:border-blue-500/50 transition-colors placeholder:text-white/5"
+                    className={cn(
+                      "w-full h-16 glass rounded-2xl pl-16 pr-6 text-3xl font-black outline-none focus:border-blue-500/50 transition-colors placeholder:text-white/5",
+                      formError && !value && "border-red-500/50"
+                    )}
                   />
                 </div>
               </div>
@@ -2013,11 +2036,19 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
                 />
               </div>
 
-              <button 
+              {formError && (
+                <div className="flex items-center gap-2 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-sm font-bold">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  {formError}
+                </div>
+              )}
+
+              <button
                 onClick={handleSave}
-                className="w-full h-20 btn-gradient text-white font-black rounded-3xl text-xl shadow-blue-500/40 mt-4 active:scale-95 transition-all"
+                disabled={uploadingFile}
+                className="w-full h-20 btn-gradient text-white font-black rounded-3xl text-xl shadow-blue-500/40 mt-4 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
               >
-                {expense ? "Salvar Alterações" : "Confirmar Lançamento"}
+                {uploadingFile ? "Enviando comprovante..." : expense ? "Salvar Alterações" : "Confirmar Lançamento"}
               </button>
             </div>
       </div>
