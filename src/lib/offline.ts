@@ -140,3 +140,24 @@ export function loadSnapshot(): Snapshot | null {
     return null;
   }
 }
+
+// ─── Cache do perfil do usuário (abre o app sem esperar a rede) ───────────────
+
+const PROFILE_KEY = 'cached_profile_v1';
+
+export function saveCachedProfile(user: User): void {
+  try {
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(user));
+  } catch {
+    // melhor-esforço
+  }
+}
+
+export function loadCachedProfile(): User | null {
+  try {
+    const raw = localStorage.getItem(PROFILE_KEY);
+    return raw ? (JSON.parse(raw) as User) : null;
+  } catch {
+    return null;
+  }
+}

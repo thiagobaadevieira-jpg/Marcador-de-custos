@@ -6,7 +6,7 @@ import { User, Expense } from "@/src/types";
 import { supabase } from "@/src/lib/supabase";
 import * as db from "@/src/lib/db";
 import type { Category } from "@/src/lib/db";
-import { queueExpense, flushQueue, saveSnapshot, loadSnapshot, getQueuedAsExpenses } from "@/src/lib/offline";
+import { queueExpense, flushQueue, saveSnapshot, loadSnapshot, getQueuedAsExpenses, saveCachedProfile, loadCachedProfile } from "@/src/lib/offline";
 
 const INITIAL_CATEGORIES: Category[] = [
   { name: "Alimentação", color: "#f87171", initials: "AL" },
@@ -2356,14 +2356,26 @@ const ptBRMonths = [
 ];
 
 const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme }: { user: User, onLogout: () => void, onProfileUpdate: (u: User) => void, theme: 'dark' | 'light', onToggleTheme: () => void }) => {
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [users, setUsers] = useState<User[]>([user]);
-  const [dataLoading, setDataLoading] = useState(true);
+  // Snapshot-first: hidrata com os dados do último acesso (abertura instantânea,
+  // inclusive offline); a rede atualiza por baixo quando responder
+  const bootSnap = useMemo(() => loadSnapshot(), []);
+  const [expenses, setExpenses] = useState<Expense[]>(bootSnap?.expenses ?? []);
+  const [categories, setCategories] = useState<Category[]>(bootSnap?.categories ?? []);
+  const [users, setUsers] = useState<User[]>(bootSnap?.users?.length ? bootSnap.users : [user]);
+  const [dataLoading, setDataLoading] = useState(!bootSnap);
   const [dataError, setDataError] = useState<string | null>(null);
 
+  // Mescla os pendentes da fila offline nos dados hidratados
+  useEffect(() => {
+    getQueuedAsExpenses().then(q => {
+      if (q.length) {
+        setExpenses(prev => [...q.filter(x => !prev.some(p => p.id === x.id)), ...prev]);
+      }
+    }).catch(() => {});
+  }, []);
+
   const loadData = () => {
-    setDataLoading(true);
+    if (!bootSnap) setDataLoading(true); // spinner só na primeira vez, sem cache
     setDataError(null);
     Promise.all([db.getExpenses(), db.getCategories(), db.getUsers(), db.getAppSettings(), getQueuedAsExpenses()])
       .then(([exps, cats, usrs, settings, queued]) => {
@@ -2376,7 +2388,8 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
       })
       .catch((err) => {
         console.error(err);
-        // Sem rede: usa o último snapshot salvo em vez da tela de erro
+        // Sem rede: mantém o que já está na tela (snapshot); erro só sem nenhum dado
+        if (bootSnap) return;
         const snap = loadSnapshot();
         if (snap) {
           setExpenses(snap.expenses);
@@ -3606,7 +3619,11 @@ export default function App() {
 
   async function loadUserProfile(userId: string, sessionEmail: string = ''): Promise<User> {
     const profile = await db.getUserProfile(userId);
-    if (profile) return { ...profile, email: sessionEmail };
+    if (profile) {
+      const full = { ...profile, email: sessionEmail };
+      saveCachedProfile(full);
+      return full;
+    }
     return { id: userId, name: 'Usuário', email: sessionEmail, color: '#3b82f6', initials: 'US' };
   }
 
@@ -3617,6 +3634,19 @@ export default function App() {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       clearTimeout(timeout);
       if (session?.user) {
+        // Perfil em cache → entra na hora, sem esperar a rede (essencial offline)
+        const cached = loadCachedProfile();
+        if (cached && cached.id === session.user.id) {
+          setCurrentUser(cached);
+          setAuthLoading(false);
+          if (navigator.onLine) {
+            // Atualiza o perfil em background
+            loadUserProfile(session.user.id, session.user.email ?? '')
+              .then(setCurrentUser)
+              .catch(() => {});
+          }
+          return;
+        }
         const profile = await loadUserProfile(session.user.id, session.user.email ?? '');
         setCurrentUser(profile);
       }
