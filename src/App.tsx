@@ -3617,14 +3617,15 @@ export default function App() {
     setTheme(t => (t === 'light' ? 'dark' : 'light'));
   }, []);
 
-  async function loadUserProfile(userId: string, sessionEmail: string = ''): Promise<User> {
+  // Retorna null quando o perfil não pôde ser carregado (inexistente OU falha de
+  // rede) — o chamador decide o fallback. NUNCA inventar um usuário sem restrição
+  // aqui: perderia o allowedCategories e vazaria categorias offline.
+  async function loadUserProfile(userId: string, sessionEmail: string = ''): Promise<User | null> {
     const profile = await db.getUserProfile(userId);
-    if (profile) {
-      const full = { ...profile, email: sessionEmail };
-      saveCachedProfile(full);
-      return full;
-    }
-    return { id: userId, name: 'Usuário', email: sessionEmail, color: '#3b82f6', initials: 'US' };
+    if (!profile) return null;
+    const full = { ...profile, email: sessionEmail };
+    saveCachedProfile(full);
+    return full;
   }
 
   useEffect(() => {
@@ -3640,15 +3641,21 @@ export default function App() {
           setCurrentUser(cached);
           setAuthLoading(false);
           if (navigator.onLine) {
-            // Atualiza o perfil em background
+            // Atualiza o perfil em background; null (falha) mantém o cacheado
             loadUserProfile(session.user.id, session.user.email ?? '')
-              .then(setCurrentUser)
+              .then((p) => { if (p) setCurrentUser(p); })
               .catch(() => {});
           }
           return;
         }
-        const profile = await loadUserProfile(session.user.id, session.user.email ?? '');
-        setCurrentUser(profile);
+        const profile = await loadUserProfile(session.user.id, session.user.email ?? '').catch(() => null);
+        setCurrentUser(profile ?? {
+          id: session.user.id,
+          name: session.user.email?.split('@')[0] ?? 'Usuário',
+          email: session.user.email ?? '',
+          color: '#3b82f6',
+          initials: (session.user.email ?? 'US').slice(0, 2).toUpperCase(),
+        });
       }
       setAuthLoading(false);
     }).catch(() => {
@@ -3662,21 +3669,25 @@ export default function App() {
       // terminar antes de prosseguir. Se fizermos uma query aqui, ela trava esperando
       // o mesmo lock. Solução: deferir para fora do callback com setTimeout(fn, 0).
       if (session?.user) {
-        // Set imediato de fallback para tirar a tela de login
-        const fallbackUser: User = {
+        // Set imediato para tirar a tela de login — PREFERIR o perfil cacheado:
+        // ele preserva allowedCategories (o fallback genérico não tem restrição
+        // e vazaria categorias quando a busca de rede falhar offline)
+        const cached = loadCachedProfile();
+        const immediateUser: User = (cached && cached.id === session.user.id) ? cached : {
           id: session.user.id,
           name: session.user.email?.split('@')[0] ?? 'Usuário',
           email: session.user.email ?? '',
           color: '#3b82f6',
           initials: (session.user.email ?? 'US').slice(0, 2).toUpperCase(),
         };
-        setCurrentUser(fallbackUser);
+        setCurrentUser(immediateUser);
 
-        // Depois, fora do lock, busca o perfil completo
+        // Depois, fora do lock, busca o perfil completo.
+        // null (perfil não carregou / sem rede) NÃO sobrescreve o atual.
         setTimeout(async () => {
           try {
             const profile = await loadUserProfile(session.user.id, session.user.email ?? '');
-            setCurrentUser(profile);
+            if (profile) setCurrentUser(profile);
           } catch (err) {
             console.error('Falha ao carregar perfil:', err);
           }
