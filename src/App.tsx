@@ -1813,6 +1813,35 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
   const [formError, setFormError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
+
+  // Teclado virtual: sobe o sheet acima do teclado e limita a altura ao espaço
+  // visível (iOS não redimensiona o viewport — só o visualViewport acompanha)
+  useEffect(() => {
+    if (!isOpen || !window.visualViewport) return;
+    const vv = window.visualViewport;
+    const update = () => {
+      const keyboardInset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      if (sheetRef.current) {
+        sheetRef.current.style.bottom = `${keyboardInset}px`;
+        sheetRef.current.style.maxHeight = `${vv.height * 0.92}px`;
+      }
+    };
+    update();
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+    };
+  }, [isOpen]);
+
+  // Mantém o campo em edição visível acima do teclado
+  const keepFieldVisible = (e: React.FocusEvent<HTMLElement>) => {
+    setTimeout(() => {
+      e.target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }, 250); // espera o teclado abrir/viewport assentar
+  };
 
   // Sync state if expense changes (e.g. when opening to edit)
   // IMPORTANTE: não incluir `categories` nas deps — causa reset dos campos ao tirar foto no mobile
@@ -1903,6 +1932,7 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
         className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100]"
       />
       <div
+        ref={sheetRef}
         className="fixed bottom-0 left-0 right-0 glass rounded-t-[48px] p-10 z-[101] max-h-[92vh] overflow-y-auto overscroll-contain border-t border-white/10"
       >
             <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-10" />
@@ -1921,6 +1951,7 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
                   autoFocus
                   type="text"
                   value={name}
+                  onFocus={keepFieldVisible}
                   onChange={(e) => {
                     setName(e.target.value);
                     if (formError) setFormError(null);
@@ -1989,6 +2020,7 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
                    <input
                     type="number"
                     value={value}
+                    onFocus={keepFieldVisible}
                     onChange={(e) => {
                       setValue(e.target.value);
                       if (formError) setFormError(null);
@@ -2008,6 +2040,7 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
                   type="date"
                   value={expenseDate}
                   max={todayISO}
+                  onFocus={keepFieldVisible}
                   onChange={(e) => setExpenseDate(e.target.value)}
                   className="w-full h-16 glass rounded-2xl px-6 text-base font-bold outline-none focus:border-blue-500/50 transition-colors"
                 />
@@ -2017,6 +2050,7 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
                 <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Observações Adicionais</label>
                 <textarea
                   value={note}
+                  onFocus={keepFieldVisible}
                   onChange={(e) => setNote(e.target.value)}
                   placeholder="Detalhes que ajudam no fechamento..."
                   className="w-full h-32 glass rounded-3xl p-6 outline-none focus:border-blue-500/50 transition-colors resize-none placeholder:text-white/5 font-medium text-base"
