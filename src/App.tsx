@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "@/src/lib/motion-stub";
-import { DollarSign, Bell, Plus, LayoutDashboard, List, LogOut, Search, Filter, Camera, X, ChevronDown, Settings, Trash2, Menu, Edit2, AlertCircle, Download, Paperclip, User as UserIcon, Check, Sun, Moon } from "lucide-react";
+import { DollarSign, Bell, Plus, Zap, LayoutDashboard, CalendarDays, ArrowLeft, ChevronRight, List, LogOut, Search, Filter, Camera, X, ChevronDown, Settings, Trash2, Menu, Edit2, AlertCircle, Download, Paperclip, User as UserIcon, Check, Sun, Moon } from "lucide-react";
 import { cn, formatCurrency } from "@/src/lib/utils";
 import { User, Expense } from "@/src/types";
 import { supabase } from "@/src/lib/supabase";
@@ -15,6 +15,14 @@ const INITIAL_CATEGORIES: Category[] = [
   { name: "Assinaturas", color: "#4ade80", initials: "AS" },
   { name: "Outros", color: "#94a3b8", initials: "OU" },
 ];
+
+const getLocalISODate = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 // --- Shared Glass Components ---
 
@@ -2143,6 +2151,149 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
   );
 };
 
+// --- Quick Expense Modal ---
+
+const QuickExpenseModal = ({ isOpen, onClose, onSave, categoryName }: {
+  isOpen: boolean,
+  onClose: () => void,
+  onSave: (expense: Omit<Expense, 'id' | 'userId' | 'createdAt'>) => void | Promise<void>,
+  categoryName: string,
+}) => {
+  const [value, setValue] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const sheetRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setValue("");
+    setFormError(null);
+    setSaving(false);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !window.visualViewport) return;
+    const viewport = window.visualViewport;
+    const update = () => {
+      const keyboardInset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+      if (sheetRef.current) sheetRef.current.style.bottom = `${keyboardInset}px`;
+    };
+    update();
+    viewport.addEventListener('resize', update);
+    viewport.addEventListener('scroll', update);
+    return () => {
+      viewport.removeEventListener('resize', update);
+      viewport.removeEventListener('scroll', update);
+    };
+  }, [isOpen]);
+
+  useLockBodyScroll(isOpen);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = async () => {
+    const typedValue = value.trim().replace(/\s/g, '');
+    const normalizedValue = typedValue.includes(',')
+      ? typedValue.replace(/\./g, '').replace(',', '.')
+      : typedValue;
+    const amount = Number(normalizedValue);
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setFormError('Digite um valor válido.');
+      return;
+    }
+
+    setSaving(true);
+    setFormError(null);
+    try {
+      await onSave({
+        name: 'Gasolina',
+        category: categoryName,
+        value: amount,
+        expenseDate: getLocalISODate(),
+        note: '',
+        attachmentUrl: '',
+      });
+      onClose();
+    } catch {
+      setFormError('Não foi possível confirmar o lançamento. Tente novamente.');
+      setSaving(false);
+    }
+  };
+
+  return (
+    <>
+      <div onClick={saving ? undefined : onClose} className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100]" />
+      <div
+        ref={sheetRef}
+        className="fixed bottom-0 left-0 right-0 glass rounded-t-[40px] px-6 pb-8 pt-4 z-[101] border-t border-white/10"
+      >
+        <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-6" />
+        <div className="max-w-md mx-auto">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-2xl font-black tracking-tight">Lançamento rápido</h2>
+              <p className="text-xs text-white/35 font-bold mt-1">Gasolina · {categoryName} · hoje</p>
+            </div>
+            <button
+              type="button"
+              aria-label="Fechar lançamento rápido"
+              onClick={onClose}
+              disabled={saving}
+              className="p-3 glass rounded-2xl hover:bg-white/5 transition-colors disabled:opacity-40"
+            >
+              <X className="w-5 h-5 text-white/40" />
+            </button>
+          </div>
+
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleSubmit();
+            }}
+            className="space-y-4"
+          >
+            <div className="relative">
+              <span className="absolute left-6 top-1/2 -translate-y-1/2 text-white/25 font-bold text-xl">R$</span>
+              <input
+                autoFocus
+                type="text"
+                inputMode="decimal"
+                value={value}
+                onChange={(event) => {
+                  setValue(event.target.value);
+                  if (formError) setFormError(null);
+                }}
+                placeholder="0,00"
+                aria-label="Valor do lançamento rápido"
+                className={cn(
+                  "w-full h-20 glass rounded-3xl pl-16 pr-6 text-4xl font-black outline-none focus:border-blue-500/50 transition-colors placeholder:text-white/5",
+                  formError && "border-red-500/50"
+                )}
+              />
+            </div>
+
+            {formError && (
+              <div className="flex items-center gap-2 px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-sm font-bold">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                {formError}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={saving}
+              className="w-full h-16 btn-gradient text-white font-black rounded-3xl text-lg active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+            >
+              {saving ? 'Confirmando...' : 'Confirmar lançamento'}
+            </button>
+          </form>
+        </div>
+      </div>
+    </>
+  );
+};
+
 // --- Expense Detail Modal ---
 
 const ExpenseDetailModal = ({ isOpen, onClose, expense, onEdit, onDelete, categories, users }: {
@@ -2439,6 +2590,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
   useEffect(() => { loadData(); }, [user.id]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isQuickModalOpen, setIsQuickModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -2527,7 +2679,8 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [expenseToEdit, setExpenseToEdit] = useState<Expense | null>(null);
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
-  const [view, setView] = useState<'overview' | 'list'>('overview');
+  const [view, setView] = useState<'overview' | 'month' | 'list'>('overview');
+  const [selectedMonthKey, setSelectedMonthKey] = useState<string | null>(null);
 
   // Conexão: banner offline + sincronização da fila quando a rede volta
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -2571,7 +2724,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
   // Atualiza lançamentos silenciosamente ao entrar na aba (sem spinner),
   // mesclando os pendentes da fila offline
   useEffect(() => {
-    if (view === 'list') {
+    if (view !== 'overview') {
       Promise.all([db.getExpenses(), getQueuedAsExpenses()])
         .then(([fresh, queued]) => setExpenses([...queued, ...fresh]))
         .catch(() => {});
@@ -2787,6 +2940,57 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
     return m;
   }, [categories]);
 
+  const monthlyExpenseGroups = useMemo(() => {
+    const visibleExpenses = user.allowedCategories && user.allowedCategories.length > 0
+      ? expenses.filter(expense => user.allowedCategories!.includes(expense.category))
+      : expenses;
+    const groups = new Map<string, Expense[]>();
+
+    for (const expense of visibleExpenses) {
+      const monthKey = expense.expenseDate.slice(0, 7);
+      const current = groups.get(monthKey) ?? [];
+      current.push(expense);
+      groups.set(monthKey, current);
+    }
+
+    return Array.from(groups.entries())
+      .sort(([monthA], [monthB]) => monthB.localeCompare(monthA))
+      .map(([monthKey, monthExpenses]) => {
+        const [year, month] = monthKey.split('-').map(Number);
+        const rawLabel = new Date(year, month - 1, 1).toLocaleDateString('pt-BR', {
+          month: 'long',
+          year: 'numeric',
+        });
+        const label = rawLabel.charAt(0).toUpperCase() + rawLabel.slice(1);
+        const sortedExpenses = [...monthExpenses].sort((a, b) => {
+          const dateComparison = b.expenseDate.localeCompare(a.expenseDate);
+          return dateComparison || b.createdAt.localeCompare(a.createdAt);
+        });
+
+        return {
+          monthKey,
+          label,
+          expenses: sortedExpenses,
+          total: sortedExpenses.reduce((sum, expense) => sum + expense.value, 0),
+        };
+      });
+  }, [expenses, user.allowedCategories]);
+
+  const selectedMonthGroup = useMemo(
+    () => monthlyExpenseGroups.find(group => group.monthKey === selectedMonthKey) ?? null,
+    [monthlyExpenseGroups, selectedMonthKey]
+  );
+
+  useEffect(() => {
+    if (view !== 'month' && selectedMonthKey) {
+      setSelectedMonthKey(null);
+      return;
+    }
+    if (view === 'month' && selectedMonthKey && !selectedMonthGroup) {
+      setSelectedMonthKey(null);
+    }
+  }, [view, selectedMonthKey, selectedMonthGroup]);
+
   // Stats em uma única passada por expenses, em vez de filter+reduce por categoria
   const stats = useMemo(() => {
     const totals = new Map<string, number>();
@@ -2909,8 +3113,10 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
     const dx = e.changedTouches[0].clientX - el._swipeX;
     const dy = Math.abs(e.changedTouches[0].clientY - el._swipeY);
     if (Math.abs(dx) > 60 && dy < 80) {
-      if (dx < 0) setView('list');
-      else setView('overview');
+      const views: Array<'overview' | 'month' | 'list'> = ['overview', 'month', 'list'];
+      const currentIndex = views.indexOf(view);
+      if (dx < 0 && currentIndex < views.length - 1) setView(views[currentIndex + 1]);
+      if (dx > 0 && currentIndex > 0) setView(views[currentIndex - 1]);
     }
   };
 
@@ -3027,22 +3233,35 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
           <button 
             onClick={() => setView('overview')}
             className={cn(
-              "flex-1 py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all",
+              "flex-1 py-3 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all",
               view === 'overview' ? "bg-white/10 text-white shadow-xl" : "text-white/40 hover:text-white/60"
             )}
           >
             <LayoutDashboard className="w-4 h-4" />
-            <span className="text-sm font-bold">Resumo</span>
+            <span className="text-xs sm:text-sm font-bold">Resumo</span>
+          </button>
+          <button
+            onClick={() => {
+              setSelectedMonthKey(null);
+              setView('month');
+            }}
+            className={cn(
+              "flex-1 py-3 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all",
+              view === 'month' ? "bg-white/10 text-white shadow-xl" : "text-white/40 hover:text-white/60"
+            )}
+          >
+            <CalendarDays className="w-4 h-4" />
+            <span className="text-xs sm:text-sm font-bold">Mês</span>
           </button>
           <button 
             onClick={() => setView('list')}
             className={cn(
-              "flex-1 py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all",
+              "flex-1 py-3 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all",
               view === 'list' ? "bg-white/10 text-white shadow-xl" : "text-white/40 hover:text-white/60"
             )}
           >
             <List className="w-4 h-4" />
-            <span className="text-sm font-bold">Lançamentos</span>
+            <span className="text-xs sm:text-sm font-bold">Lançamentos</span>
           </button>
         </div>
 
@@ -3136,6 +3355,87 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
                   })}
                 </div>
               </GlassCard>
+            </motion.div>
+          ) : view === 'month' ? (
+            <motion.div
+              key="month"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1, transition: { duration: 0.15 } }}
+              exit={{ opacity: 0, transition: { duration: 0.05 } }}
+              className="space-y-8"
+            >
+              {!selectedMonthGroup && monthlyExpenseGroups.length === 0 ? (
+                <div className="p-10 text-center glass rounded-[32px] border border-white/5 space-y-3">
+                  <CalendarDays className="w-8 h-8 text-white/10 mx-auto" />
+                  <p className="text-xs font-bold text-white/50">Nenhum lançamento encontrado</p>
+                  <p className="text-[10px] text-white/20 font-medium">Os gastos aparecerão aqui separados por mês.</p>
+                </div>
+              ) : !selectedMonthGroup ? (
+                <div className="space-y-4">
+                  {monthlyExpenseGroups.map(group => (
+                    <motion.button
+                      key={group.monthKey}
+                      type="button"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      onClick={() => setSelectedMonthKey(group.monthKey)}
+                      className="w-full interactive-glass rounded-[28px] px-5 py-5 flex items-center justify-between gap-4 text-left group"
+                      aria-label={`Abrir gastos de ${group.label}`}
+                    >
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className="w-11 h-11 rounded-2xl bg-blue-500/10 border border-blue-500/15 flex items-center justify-center shrink-0">
+                          <CalendarDays className="w-5 h-5 text-blue-400" />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="text-base font-black tracking-tight truncate">{group.label}</h3>
+                          <p className="text-[9px] font-black uppercase tracking-widest text-white/25 mt-1">
+                            {group.expenses.length} {group.expenses.length === 1 ? 'lançamento' : 'lançamentos'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <p className="text-base sm:text-lg font-black tracking-tight">{formatCurrency(group.total)}</p>
+                        <ChevronRight className="w-5 h-5 text-white/20 group-hover:text-white/50 transition-colors" />
+                      </div>
+                    </motion.button>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedMonthKey(null)}
+                    className="h-11 px-4 glass rounded-2xl flex items-center gap-2 text-xs font-black text-white/60 hover:text-white transition-colors"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    Voltar aos meses
+                  </button>
+
+                  <div className="glass rounded-[28px] px-5 py-5 flex items-center justify-between gap-4 border border-white/5">
+                    <div className="min-w-0">
+                      <h3 className="text-lg font-black tracking-tight truncate">{selectedMonthGroup.label}</h3>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-white/25 mt-1">
+                        {selectedMonthGroup.expenses.length} {selectedMonthGroup.expenses.length === 1 ? 'lançamento' : 'lançamentos'}
+                      </p>
+                    </div>
+                    <p className="text-xl font-black tracking-tight shrink-0">{formatCurrency(selectedMonthGroup.total)}</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    {selectedMonthGroup.expenses.map((expense, idx) => (
+                      <ExpenseRow
+                        key={expense.id}
+                        expense={expense}
+                        categoryColor={categoryColorByName.get(expense.category)}
+                        ownerName={usersById.get(expense.userId)?.name}
+                        idx={idx}
+                        pageSize={PAGE_SIZE}
+                        onSelect={setSelectedExpense}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </motion.div>
           ) : (
             <motion.div
@@ -3552,15 +3852,28 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
         </AnimatePresence>
       </div>
 
-      {/* Floating Action Button */}
-      <motion.button 
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        onClick={() => setIsModalOpen(true)}
-        className="fixed bottom-8 right-8 w-16 h-16 btn-gradient rounded-full flex items-center justify-center shadow-[0_15px_30px_-5px_rgba(59,130,246,0.6)] z-[90] active:scale-95 transition-all"
-      >
-        <Plus className="w-8 h-8 text-white stroke-[3]" />
-      </motion.button>
+      {/* Floating action buttons */}
+      <div className="fixed bottom-8 right-8 flex items-center gap-3 z-[90]">
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setIsQuickModalOpen(true)}
+          className="h-14 px-5 glass rounded-full flex items-center gap-2 border border-amber-400/20 text-amber-300 font-black text-sm shadow-[0_12px_28px_-8px_rgba(251,191,36,0.45)] active:scale-95 transition-all"
+          aria-label="Abrir lançamento rápido de gasolina"
+        >
+          <Zap className="w-5 h-5 fill-current" />
+          Rápido
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setIsModalOpen(true)}
+          className="w-16 h-16 btn-gradient rounded-full flex items-center justify-center shadow-[0_15px_30px_-5px_rgba(59,130,246,0.6)] active:scale-95 transition-all"
+          aria-label="Adicionar lançamento completo"
+        >
+          <Plus className="w-8 h-8 text-white stroke-[3]" />
+        </motion.button>
+      </div>
 
       <ExpenseModal 
         isOpen={isModalOpen} 
@@ -3572,6 +3885,12 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
         expense={expenseToEdit}
         onSave={handleSaveExpense}
         categories={visibleCategories}
+      />
+      <QuickExpenseModal
+        isOpen={isQuickModalOpen}
+        onClose={() => setIsQuickModalOpen(false)}
+        onSave={handleSaveExpense}
+        categoryName={visibleCategories.find(category => category.name.toLocaleLowerCase('pt-BR') === 'transporte')?.name || 'Transporte'}
       />
       <ExpenseDetailModal
         isOpen={!!selectedExpense}
