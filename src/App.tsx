@@ -2884,6 +2884,12 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
     return categories.filter(c => user.allowedCategories!.includes(c.name));
   }, [categories, user.allowedCategories]);
 
+  const isThiagoProfile = useMemo(() => {
+    const profileName = user.name.trim().toLocaleLowerCase('pt-BR');
+    const emailLogin = user.email.split('@')[0]?.trim().toLocaleLowerCase('pt-BR') ?? '';
+    return profileName === 'thiago' || profileName.startsWith('thiago ') || emailLogin.startsWith('thiago');
+  }, [user.name, user.email]);
+
   const filteredAndSortedExpenses = useMemo(() => {
     let result = [...expenses];
 
@@ -3854,16 +3860,18 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
 
       {/* Floating action buttons */}
       <div className="fixed bottom-8 right-8 flex items-center gap-3 z-[90]">
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setIsQuickModalOpen(true)}
-          className="h-14 px-5 glass rounded-full flex items-center gap-2 border border-amber-400/20 text-amber-300 font-black text-sm shadow-[0_12px_28px_-8px_rgba(251,191,36,0.45)] active:scale-95 transition-all"
-          aria-label="Abrir lançamento rápido de gasolina"
-        >
-          <Zap className="w-5 h-5 fill-current" />
-          Rápido
-        </motion.button>
+        {isThiagoProfile && (
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setIsQuickModalOpen(true)}
+            className="h-14 px-5 glass rounded-full flex items-center gap-2 border border-amber-400/20 text-amber-300 font-black text-sm shadow-[0_12px_28px_-8px_rgba(251,191,36,0.45)] active:scale-95 transition-all"
+            aria-label="Abrir lançamento rápido de gasolina"
+          >
+            <Zap className="w-5 h-5 fill-current" />
+            Rápido
+          </motion.button>
+        )}
         <motion.button
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
@@ -3886,12 +3894,14 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
         onSave={handleSaveExpense}
         categories={visibleCategories}
       />
-      <QuickExpenseModal
-        isOpen={isQuickModalOpen}
-        onClose={() => setIsQuickModalOpen(false)}
-        onSave={handleSaveExpense}
-        categoryName={visibleCategories.find(category => category.name.toLocaleLowerCase('pt-BR') === 'transporte')?.name || 'Transporte'}
-      />
+      {isThiagoProfile && (
+        <QuickExpenseModal
+          isOpen={isQuickModalOpen}
+          onClose={() => setIsQuickModalOpen(false)}
+          onSave={handleSaveExpense}
+          categoryName={visibleCategories.find(category => category.name.toLocaleLowerCase('pt-BR') === 'transporte')?.name || 'Transporte'}
+        />
+      )}
       <ExpenseDetailModal
         isOpen={!!selectedExpense}
         onClose={() => setSelectedExpense(null)}
