@@ -240,7 +240,7 @@ export async function updateAppSettings(
 
 // ─── Push Subscriptions ──────────────────────────────────────────────────────
 
-export const VAPID_PUBLIC_KEY = 'BFl-zEkt9AJn2_hmizIx2Z1h2iaNkKi1FuyO2KgZkH30UsX8rBK3bGn99912DdiqYLxN1bKkrL5ZiudDNVBPBG4';
+export const VAPID_PUBLIC_KEY = 'BHIXvH6W9Z6t-o2fJjrO67k5T71vwKvw7vZq2cCAanOf57U1wO6mocKwAP1fp4XHy_KMEmm3vGina0yY962D1iw';
 
 export async function upsertPushSubscription(
   userId: string,
@@ -266,17 +266,4 @@ export async function upsertPushSubscription(
 
 export async function disablePushSubscription(userId: string): Promise<void> {
   await supabase.from('push_subscriptions').update({ enabled: false }).eq('user_id', userId);
-}
-
-// ─── Storage ─────────────────────────────────────────────────────────────────
-
-export async function uploadReceipt(file: File, userId: string): Promise<string> {
-  const ext = file.name.split('.').pop() ?? 'jpg';
-  const path = `${userId}/${Date.now()}.${ext}`;
-  const { error } = await supabase.storage
-    .from('receipts')
-    .upload(path, file, { upsert: false });
-  if (error) throw error;
-  const { data } = supabase.storage.from('receipts').getPublicUrl(path);
-  return data.publicUrl;
 }

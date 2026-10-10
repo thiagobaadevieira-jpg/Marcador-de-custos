@@ -2,7 +2,7 @@ import * as db from './db';
 import type { User, Expense } from '../types';
 import type { Category } from './db';
 
-// ─── Fila de gastos pendentes (IndexedDB — suporta blobs de foto) ─────────────
+// ─── Fila de gastos pendentes (IndexedDB) ────────────────────────────────────
 
 const DB_NAME = 'controle-gastos-offline';
 const STORE = 'pending-expenses';
@@ -10,7 +10,6 @@ const STORE = 'pending-expenses';
 export type QueuedExpense = {
   tempId: string;
   data: Omit<Expense, 'id' | 'createdAt' | 'attachmentUrl' | 'pending'>;
-  photoBlob: Blob | null;
   createdAt: string;
 };
 
@@ -28,8 +27,7 @@ function openDB(): Promise<IDBDatabase> {
 }
 
 export async function queueExpense(
-  data: QueuedExpense['data'],
-  photoBlob: Blob | null
+  data: QueuedExpense['data']
 ): Promise<string> {
   const tempId = `offline-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const idb = await openDB();
@@ -38,7 +36,6 @@ export async function queueExpense(
     tx.objectStore(STORE).put({
       tempId,
       data,
-      photoBlob,
       createdAt: new Date().toISOString(),
     } satisfies QueuedExpense);
     tx.oncomplete = () => resolve();
@@ -68,7 +65,6 @@ async function removeQueued(tempId: string): Promise<void> {
 
 /**
  * Envia todos os gastos pendentes ao Supabase.
- * Foto (se houver) é enviada antes do registro.
  * Erro de rede interrompe — os restantes ficam para a próxima tentativa.
  * Retorna quantos itens foram sincronizados.
  */
@@ -77,14 +73,7 @@ export async function flushQueue(userId: string): Promise<number> {
   let synced = 0;
   for (const item of queued) {
     try {
-      let attachmentUrl: string | undefined;
-      if (item.photoBlob) {
-        const file = new File([item.photoBlob], 'comprovante.jpg', {
-          type: item.photoBlob.type || 'image/jpeg',
-        });
-        attachmentUrl = await db.uploadReceipt(file, userId);
-      }
-      await db.createExpense({ ...item.data, userId, attachmentUrl });
+      await db.createExpense({ ...item.data, userId });
       await removeQueued(item.tempId);
       synced++;
     } catch {
@@ -159,5 +148,13 @@ export function loadCachedProfile(): User | null {
     return raw ? (JSON.parse(raw) as User) : null;
   } catch {
     return null;
+  }
+}
+
+export function clearCachedProfile(): void {
+  try {
+    localStorage.removeItem(PROFILE_KEY);
+  } catch {
+    // melhor-esforço
   }
 }

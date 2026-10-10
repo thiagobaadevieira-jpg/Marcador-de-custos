@@ -32,6 +32,7 @@ export const MOCK_EXPENSES: Expense[] = [
     name: "Almoço Equipe",
     value: 125.50,
     note: "Restaurante Central",
+    expenseDate: new Date().toISOString().slice(0, 10),
     createdAt: new Date().toISOString(),
   },
   {
@@ -40,6 +41,7 @@ export const MOCK_EXPENSES: Expense[] = [
     category: "Transporte",
     name: "Uber Escritório",
     value: 45.20,
+    expenseDate: new Date(Date.now() - 3600000).toISOString().slice(0, 10),
     createdAt: new Date(Date.now() - 3600000).toISOString(),
   },
   {
@@ -49,6 +51,7 @@ export const MOCK_EXPENSES: Expense[] = [
     name: "Papelaria",
     value: 89.90,
     note: "Canetas e blocos",
+    expenseDate: new Date(Date.now() - 86400000).toISOString().slice(0, 10),
     createdAt: new Date(Date.now() - 86400000).toISOString(),
   },
   {
@@ -57,6 +60,7 @@ export const MOCK_EXPENSES: Expense[] = [
     category: "Alimentação",
     name: "Café",
     value: 12.00,
+    expenseDate: new Date(Date.now() - 172800000).toISOString().slice(0, 10),
     createdAt: new Date(Date.now() - 172800000).toISOString(),
   },
   {
@@ -66,6 +70,7 @@ export const MOCK_EXPENSES: Expense[] = [
     name: "Assinatura Adobe",
     value: 230.00,
     note: "Mensalidade",
+    expenseDate: new Date(Date.now() - 259200000).toISOString().slice(0, 10),
     createdAt: new Date(Date.now() - 259200000).toISOString(),
   },
 ];

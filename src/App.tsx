@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "@/src/lib/motion-stub";
-import { DollarSign, Bell, Plus, Zap, LayoutDashboard, CalendarDays, ArrowLeft, ChevronRight, List, LogOut, Search, Filter, Camera, X, ChevronDown, Settings, Trash2, Menu, Edit2, AlertCircle, Download, Paperclip, User as UserIcon, Check, Sun, Moon } from "lucide-react";
+import { DollarSign, Bell, Plus, Zap, LayoutDashboard, CalendarDays, ArrowLeft, ChevronRight, List, LogOut, Search, Filter, Camera, X, ChevronDown, Settings, Trash2, Menu, Edit2, AlertCircle, Download, User as UserIcon, Check, Sun, Moon } from "lucide-react";
 import { cn, formatCurrency } from "@/src/lib/utils";
 import { User, Expense } from "@/src/types";
 import { supabase } from "@/src/lib/supabase";
 import * as db from "@/src/lib/db";
 import type { Category } from "@/src/lib/db";
-import { queueExpense, flushQueue, saveSnapshot, loadSnapshot, getQueuedAsExpenses, saveCachedProfile, loadCachedProfile } from "@/src/lib/offline";
+import { queueExpense, flushQueue, saveSnapshot, loadSnapshot, getQueuedAsExpenses, saveCachedProfile, loadCachedProfile, clearCachedProfile } from "@/src/lib/offline";
 
 const INITIAL_CATEGORIES: Category[] = [
   { name: "Alimentação", color: "#f87171", initials: "AL" },
@@ -1800,12 +1800,11 @@ const LoginScreen = () => {
 
 // --- Expense Modal (Bottom Sheet) ---
 
-const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
+const ExpenseModal = ({ isOpen, onClose, expense, onSave, categories }: {
   isOpen: boolean,
   onClose: () => void,
-  user: User,
   expense?: Expense | null,
-  onSave: (expense: Omit<Expense, 'id' | 'userId' | 'createdAt'> & { id?: string, photoBlob?: File | null }) => void,
+  onSave: (expense: Omit<Expense, 'id' | 'userId' | 'createdAt'> & { id?: string }) => void,
   categories: Category[]
 }) => {
   const todayISO = new Date().toISOString().slice(0, 10);
@@ -1815,12 +1814,7 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
   const [category, setCategory] = useState(expense?.category || categories[0]?.name || "");
   const [expenseDate, setExpenseDate] = useState(expense?.expenseDate || todayISO);
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
-  const [attachmentUrl, setAttachmentUrl] = useState(expense?.attachmentUrl || "");
-
-  const [uploadingFile, setUploadingFile] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
 
   // Teclado virtual: sobe o sheet acima do teclado e limita a altura ao espaço
@@ -1859,49 +1853,18 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
       setValue(expense.value.toString());
       setNote(expense.note || "");
       setCategory(expense.category);
-      setAttachmentUrl(expense.attachmentUrl || "");
       setExpenseDate(expense.expenseDate || todayISO);
       setFormError(null);
-      setPendingPhoto(null);
     } else if (isOpen) {
       setName("");
       setValue("");
       setNote("");
       setCategory(categories[0]?.name || "");
-      setAttachmentUrl("");
       setExpenseDate(todayISO);
       setFormError(null);
-      setPendingPhoto(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expense, isOpen]);
-
-  const [pendingPhoto, setPendingPhoto] = useState<File | null>(null);
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Offline: guarda o arquivo localmente — sobe junto com a sincronização
-    if (!navigator.onLine) {
-      setPendingPhoto(file);
-      setAttachmentUrl(URL.createObjectURL(file));
-      return;
-    }
-
-    setUploadingFile(true);
-    try {
-      const url = await db.uploadReceipt(file, user.id);
-      setAttachmentUrl(url);
-      setPendingPhoto(null);
-    } catch {
-      // Falha de rede no meio do upload: trata como offline
-      setPendingPhoto(file);
-      setAttachmentUrl(URL.createObjectURL(file));
-    } finally {
-      setUploadingFile(false);
-    }
-  };
 
   const selectedCategory = categories.find(c => c.name === category) || categories[0] || { name: 'Outros', color: '#94a3b8' };
 
@@ -1914,17 +1877,13 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
       );
       return;
     }
-    if (uploadingFile) return;
     onSave({
       id: expense?.id,
       name,
       value: parseFloat(value),
       note,
       category,
-      // blob: URL é só preview local — a URL real vem após sincronizar a foto
-      attachmentUrl: attachmentUrl.startsWith('blob:') ? '' : attachmentUrl,
       expenseDate,
-      photoBlob: pendingPhoto,
     });
     onClose();
   };
@@ -2065,72 +2024,6 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
                 />
               </div>
 
-              <div className="space-y-3">
-                <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Comprovante Fiscal</label>
-                {attachmentUrl ? (
-                  <div className="w-full p-4 glass rounded-[24px] flex items-center justify-between border border-white/10 relative overflow-hidden bg-white/[0.02]">
-                    <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 rounded-xl overflow-hidden border border-white/10 bg-black/40 flex-shrink-0 flex items-center justify-center">
-                        <img 
-                          src={attachmentUrl} 
-                          alt="Pré-visualização" 
-                          className="w-full h-full object-cover"
-                          referrerPolicy="no-referrer"
-                        />
-                      </div>
-                      <div className="text-left">
-                        <p className="text-xs font-bold text-white leading-none">Comprovante Anexado</p>
-                        <p className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider mt-1.5 leading-none">Pronto para salvar</p>
-                      </div>
-                    </div>
-                    <button 
-                      type="button"
-                      onClick={() => { setAttachmentUrl(""); setPendingPhoto(null); }}
-                      className="p-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/10 rounded-2xl active:scale-95 transition-all text-xs font-bold flex items-center justify-center gap-1 cursor-pointer"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Remover
-                    </button>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3.5">
-                    <button
-                      type="button"
-                      disabled={uploadingFile}
-                      onClick={() => fileInputRef.current?.click()}
-                      className="h-16 glass rounded-2xl text-white/40 hover:text-white hover:border-white/20 transition-all border-dashed flex flex-col items-center justify-center gap-1 text-[10px] font-bold uppercase tracking-widest cursor-pointer group disabled:opacity-50"
-                    >
-                      <Paperclip className="w-4 h-4 opacity-40 group-hover:opacity-100 group-hover:text-blue-400 transition-all" />
-                      <span>{uploadingFile ? 'Enviando...' : 'Anexar Arquivo'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      disabled={uploadingFile}
-                      onClick={() => cameraInputRef.current?.click()}
-                      className="h-16 glass rounded-2xl text-white/40 hover:text-white hover:border-white/20 transition-all border-dashed flex flex-col items-center justify-center gap-1 text-[10px] font-bold uppercase tracking-widest cursor-pointer group disabled:opacity-50"
-                    >
-                      <Camera className="w-4 h-4 opacity-40 group-hover:opacity-100 group-hover:text-emerald-400 transition-all" />
-                      <span>{uploadingFile ? 'Enviando...' : 'Tirar Foto'}</span>
-                    </button>
-                  </div>
-                )}
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handleFileChange} 
-                  accept="image/*" 
-                  className="hidden" 
-                />
-                <input 
-                  type="file" 
-                  ref={cameraInputRef} 
-                  onChange={handleFileChange} 
-                  accept="image/*" 
-                  capture="environment" 
-                  className="hidden" 
-                />
-              </div>
-
               {formError && (
                 <div className="flex items-center gap-2 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-sm font-bold">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -2140,10 +2033,9 @@ const ExpenseModal = ({ isOpen, onClose, user, expense, onSave, categories }: {
 
               <button
                 onClick={handleSave}
-                disabled={uploadingFile}
-                className="w-full h-20 btn-gradient text-white font-black rounded-3xl text-xl shadow-blue-500/40 mt-4 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+                className="w-full h-20 btn-gradient text-white font-black rounded-3xl text-xl shadow-blue-500/40 mt-4 active:scale-95 transition-all"
               >
-                {uploadingFile ? "Enviando comprovante..." : expense ? "Salvar Alterações" : "Confirmar Lançamento"}
+                {expense ? "Salvar Alterações" : "Confirmar Lançamento"}
               </button>
             </div>
       </div>
@@ -2305,14 +2197,6 @@ const ExpenseDetailModal = ({ isOpen, onClose, expense, onEdit, onDelete, catego
   categories: Category[],
   users: User[]
 }) => {
-  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
-
-  React.useEffect(() => {
-    if (!isOpen) {
-      setIsImageViewerOpen(false);
-    }
-  }, [isOpen]);
-
   useLockBodyScroll(isOpen && !!expense);
 
   if (!expense) return null;
@@ -2377,32 +2261,6 @@ const ExpenseDetailModal = ({ isOpen, onClose, expense, onEdit, onDelete, catego
               )}
             </div>
 
-            {expense.attachmentUrl ? (
-              <div className="w-full mb-6">
-                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30 text-left mb-2 ml-1">Anexo Comprovante</p>
-                <div 
-                  onClick={() => setIsImageViewerOpen(true)}
-                  className="w-full h-16 rounded-2xl border border-white/10 overflow-hidden bg-black/40 group relative flex items-center justify-between px-4 cursor-pointer hover:bg-white/5 hover:border-white/20 transition-all"
-                >
-                  <div className="flex items-center gap-3">
-                    <img 
-                      src={expense.attachmentUrl} 
-                      alt="Comprovante" 
-                      className="w-10 h-10 object-cover rounded-lg border border-white/10 group-hover:scale-105 transition-transform duration-200"
-                      referrerPolicy="no-referrer"
-                    />
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Ver Comprovante</span>
-                  </div>
-                  <Search className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" />
-                </div>
-              </div>
-            ) : (
-              <div className="w-full h-14 bg-white/[0.01] hover:bg-white/[0.02] border border-dashed border-white/5 rounded-2xl flex items-center gap-4 px-5 text-white/20 mb-6 font-medium">
-                 <Camera className="w-5 h-5 opacity-30" />
-                 <span className="text-[9px] font-bold uppercase tracking-widest">Sem Anexo Digital</span>
-              </div>
-            )}
-
             <div className="w-full grid grid-cols-2 gap-3.5">
               <button 
                 onClick={() => onEdit(expense)}
@@ -2421,42 +2279,6 @@ const ExpenseDetailModal = ({ isOpen, onClose, expense, onEdit, onDelete, catego
             </div>
           </motion.div>
 
-          {/* Lightbox / Full screen photo viewer */}
-          <AnimatePresence>
-            {isImageViewerOpen && expense.attachmentUrl && (
-              <>
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  onClick={() => setIsImageViewerOpen(false)}
-                  className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[300] flex items-center justify-center p-4"
-                >
-                  <button 
-                    onClick={() => setIsImageViewerOpen(false)}
-                    className="absolute top-6 right-6 p-3 bg-white/10 rounded-full hover:bg-white/20 text-white transition-all active:scale-95 z-[320] cursor-pointer"
-                  >
-                    <X className="w-6 h-6" />
-                  </button>
-
-                  <motion.div
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.9, opacity: 0 }}
-                    onClick={(e) => e.stopPropagation()}
-                    className="max-w-xl max-h-[80vh] overflow-hidden rounded-3xl border border-white/10 shadow-2xl bg-slate-900 relative z-[310] flex items-center justify-center"
-                  >
-                    <img 
-                      src={expense.attachmentUrl} 
-                      alt="Comprovante de pagamento" 
-                      className="max-w-full max-h-[80vh] object-contain rounded-3xl"
-                      referrerPolicy="no-referrer"
-                    />
-                  </motion.div>
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
         </>
       )}
     </AnimatePresence>
@@ -2496,7 +2318,6 @@ const ExpenseRow = memo(({ expense, categoryColor, ownerName, idx, pageSize, onS
                 Pendente
               </span>
             )}
-            {expense.attachmentUrl && <Paperclip className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
             <p className="font-bold text-sm tracking-tight">{formatCurrency(expense.value)}</p>
           </div>
         </div>
@@ -2651,8 +2472,19 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
         const base64 = (vapidKey + padding).replace(/-/g, '+').replace(/_/g, '/');
         const rawKey = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
 
-        // Subscreve (ou reutiliza subscrição existente)
+        // Uma troca de chave VAPID exige renovar a inscrição existente.
         let sub = await reg.pushManager.getSubscription();
+        const currentKey = sub?.options.applicationServerKey
+          ? new Uint8Array(sub.options.applicationServerKey)
+          : null;
+        const usesCurrentKey = currentKey?.length === rawKey.length
+          && currentKey.every((byte, index) => byte === rawKey[index]);
+
+        if (sub && !usesCurrentKey) {
+          await sub.unsubscribe();
+          sub = null;
+        }
+
         if (!sub) {
           sub = await reg.pushManager.subscribe({
             userVisibleOnly: true,
@@ -2721,16 +2553,6 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Atualiza lançamentos silenciosamente ao entrar na aba (sem spinner),
-  // mesclando os pendentes da fila offline
-  useEffect(() => {
-    if (view !== 'overview') {
-      Promise.all([db.getExpenses(), getQueuedAsExpenses()])
-        .then(([fresh, queued]) => setExpenses([...queued, ...fresh]))
-        .catch(() => {});
-    }
-  }, [view]);
-
   const handleEdit = (expense: Expense) => {
     if (!navigator.onLine || expense.pending || expense.id.startsWith('offline-')) {
       alert('Edição disponível quando a conexão voltar.');
@@ -2749,8 +2571,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
     setExpenseToDelete(expense);
   };
 
-  const handleSaveExpense = useCallback(async (newExpenseData: Omit<Expense, 'id' | 'userId' | 'createdAt'> & { id?: string, photoBlob?: File | null }) => {
-    const { photoBlob, ...expenseData } = newExpenseData;
+  const handleSaveExpense = useCallback(async (expenseData: Omit<Expense, 'id' | 'userId' | 'createdAt'> & { id?: string }) => {
 
     if (expenseData.id) {
       const { id, ...updates } = expenseData;
@@ -2761,7 +2582,7 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
 
     const enqueue = async () => {
       const { attachmentUrl: _drop, ...rest } = expenseData;
-      const tempId = await queueExpense({ ...rest, userId: user.id }, photoBlob ?? null);
+      const tempId = await queueExpense({ ...rest, userId: user.id });
       const local: Expense = {
         ...rest,
         id: tempId,
@@ -2773,8 +2594,8 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
       setExpenses(prev => [local, ...prev]);
     };
 
-    if (!navigator.onLine || photoBlob) {
-      // Offline (ou foto pendente de upload) → entra na fila de sincronização
+    if (!navigator.onLine) {
+      // Offline → entra na fila de sincronização
       await enqueue();
       return;
     }
@@ -3889,7 +3710,6 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
           setIsModalOpen(false);
           setExpenseToEdit(null);
         }} 
-        user={user} 
         expense={expenseToEdit}
         onSave={handleSaveExpense}
         categories={visibleCategories}
@@ -3992,8 +3812,12 @@ export default function App() {
   }
 
   useEffect(() => {
-    // Timeout de segurança: se o Supabase não responder em 5s, vai para login
-    const timeout = setTimeout(() => setAuthLoading(false), 5000);
+    // Se a rede estiver lenta, mantém o perfil local em vez de exibir um falso logout.
+    const timeout = setTimeout(() => {
+      const cached = loadCachedProfile();
+      if (cached) setCurrentUser(cached);
+      setAuthLoading(false);
+    }, 5000);
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       clearTimeout(timeout);
@@ -4026,7 +3850,7 @@ export default function App() {
       setAuthLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       // CRÍTICO: nunca fazer queries Supabase DIRETO no callback — causa deadlock.
       // O signInWithPassword retém o lock interno de auth e espera este callback
       // terminar antes de prosseguir. Se fizermos uma query aqui, ela trava esperando
@@ -4055,7 +3879,10 @@ export default function App() {
             console.error('Falha ao carregar perfil:', err);
           }
         }, 0);
-      } else {
+      } else if (event === 'SIGNED_OUT') {
+        // Só limpa o usuário em um logout real. Eventos transitórios sem sessão
+        // não devem expulsar o usuário, especialmente em conexões móveis lentas.
+        clearCachedProfile();
         setCurrentUser(null);
       }
     });
