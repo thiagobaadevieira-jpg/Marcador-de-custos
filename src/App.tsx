@@ -2045,6 +2045,16 @@ const ExpenseModal = ({ isOpen, onClose, expense, onSave, categories }: {
 
 // --- Quick Expense Modal ---
 
+const formatQuickAmount = (digits: string) => {
+  const cleanDigits = digits.replace(/\D/g, '');
+  if (!cleanDigits) return '';
+
+  const padded = cleanDigits.padStart(3, '0');
+  const integerPart = padded.slice(0, -2).replace(/^0+(?=\d)/, '') || '0';
+  const decimalPart = padded.slice(-2);
+  return `${integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${decimalPart}`;
+};
+
 const QuickExpenseModal = ({ isOpen, onClose, onSave, categoryName }: {
   isOpen: boolean,
   onClose: () => void,
@@ -2084,11 +2094,7 @@ const QuickExpenseModal = ({ isOpen, onClose, onSave, categoryName }: {
   if (!isOpen) return null;
 
   const handleSubmit = async () => {
-    const typedValue = value.trim().replace(/\s/g, '');
-    const normalizedValue = typedValue.includes(',')
-      ? typedValue.replace(/\./g, '').replace(',', '.')
-      : typedValue;
-    const amount = Number(normalizedValue);
+    const amount = Number(value) / 100;
 
     if (!Number.isFinite(amount) || amount <= 0) {
       setFormError('Digite um valor válido.');
@@ -2150,10 +2156,10 @@ const QuickExpenseModal = ({ isOpen, onClose, onSave, categoryName }: {
               <input
                 autoFocus
                 type="text"
-                inputMode="decimal"
-                value={value}
+                inputMode="numeric"
+                value={formatQuickAmount(value)}
                 onChange={(event) => {
-                  setValue(event.target.value);
+                  setValue(event.target.value.replace(/\D/g, ''));
                   if (formError) setFormError(null);
                 }}
                 placeholder="0,00"
