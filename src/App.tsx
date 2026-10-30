@@ -2814,6 +2814,12 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
     [monthlyExpenseGroups, selectedMonthKey]
   );
 
+  const monthlyAverage = useMemo(() => {
+    if (monthlyExpenseGroups.length === 0) return 0;
+    const total = monthlyExpenseGroups.reduce((sum, group) => sum + group.total, 0);
+    return total / monthlyExpenseGroups.length;
+  }, [monthlyExpenseGroups]);
+
   useEffect(() => {
     if (view !== 'month' && selectedMonthKey) {
       setSelectedMonthKey(null);
@@ -3197,6 +3203,22 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
               exit={{ opacity: 0, transition: { duration: 0.05 } }}
               className="space-y-8"
             >
+              {!selectedMonthGroup && monthlyExpenseGroups.length > 0 && (
+                <GlassCard className="p-5 sm:p-6 flex items-center justify-between gap-4 border border-blue-500/15">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/35">
+                      Média mensal
+                    </p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-white/20 mt-1">
+                      {monthlyExpenseGroups.length} {monthlyExpenseGroups.length === 1 ? 'mês considerado' : 'meses considerados'}
+                    </p>
+                  </div>
+                  <p className="text-xl sm:text-2xl font-black tracking-tight text-blue-200">
+                    {formatCurrency(monthlyAverage)}
+                  </p>
+                </GlassCard>
+              )}
+
               {!selectedMonthGroup && monthlyExpenseGroups.length === 0 ? (
                 <div className="p-10 text-center glass rounded-[32px] border border-white/5 space-y-3">
                   <CalendarDays className="w-8 h-8 text-white/10 mx-auto" />
