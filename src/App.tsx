@@ -2760,6 +2760,14 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
     [filteredAndSortedExpenses]
   );
 
+  const dailyAverage = useMemo(() => {
+    const daysWithExpenses = new Set(filteredAndSortedExpenses.map(expense => expense.expenseDate));
+    return {
+      days: daysWithExpenses.size,
+      value: daysWithExpenses.size > 0 ? searchTotal / daysWithExpenses.size : 0,
+    };
+  }, [filteredAndSortedExpenses, searchTotal]);
+
   // O(1) lookup maps — evita scan linear em cada render para cada linha da lista
   const usersById = useMemo(() => {
     const m = new Map<string, User>();
@@ -3300,6 +3308,22 @@ const DashboardScreen = ({ user, onLogout, onProfileUpdate, theme, onToggleTheme
               exit={{ opacity: 0, transition: { duration: 0.05 } }}
               className="space-y-6"
             >
+              {filteredAndSortedExpenses.length > 0 && (
+                <GlassCard className="p-5 sm:p-6 flex items-center justify-between gap-4 border border-emerald-500/15">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/35">
+                      Média por dia
+                    </p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-white/20 mt-1">
+                      {dailyAverage.days} {dailyAverage.days === 1 ? 'dia com lançamento' : 'dias com lançamentos'}
+                    </p>
+                  </div>
+                  <p className="text-xl sm:text-2xl font-black tracking-tight text-emerald-200">
+                    {formatCurrency(dailyAverage.value)}
+                  </p>
+                </GlassCard>
+              )}
+
               {/* Search/Filter Container */}
               <div className="space-y-4 relative z-50">
                 <div className="flex items-center">
